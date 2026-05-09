@@ -112,8 +112,9 @@ export default function Dashboard() {
     return 'Pololos';
   };
 
-  const formatDate = (value: string | number) => {
-    const d = new Date(String(value) + 'T12:00:00');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formatDate = (label: any) => {
+    const d = new Date(String(label) + 'T12:00:00');
     return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
   };
 
