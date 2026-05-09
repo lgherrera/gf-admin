@@ -19,7 +19,9 @@ interface Metrics {
   activeToday: number;
   avgStage: number;
   messagesPerDay: { date: string; count: number }[];
+  usersPerDay: { date: string; count: number }[];
   topGirlfriends: { name: string; count: number }[];
+  topUsers: { userId: string; name: string | null; phone: string | null; count: number }[];
 }
 
 export default function Dashboard() {
@@ -59,7 +61,7 @@ export default function Dashboard() {
     fetchMetrics(password);
   };
 
-  // Auto-refresh every 5 minutes
+  // Auto-refresh every hour
   useEffect(() => {
     if (!authenticated) return;
     const interval = setInterval(() => fetchMetrics(password), 60 * 60 * 1000);
@@ -168,9 +170,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Messages Chart + Top Characters */}
       <div className="charts-grid">
-        {/* Messages per day chart */}
         <div className="chart-card">
           <h2 className="chart-title">Messages — Last 14 Days</h2>
           <div className="chart-container">
@@ -223,7 +224,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top girlfriends */}
         <div className="chart-card">
           <h2 className="chart-title">Top Characters</h2>
           <div className="gf-list">
@@ -235,6 +235,81 @@ export default function Dashboard() {
               </div>
             ))}
             {metrics.topGirlfriends.length === 0 && (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                No data yet
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Users Chart + Top Users */}
+      <div className="charts-grid">
+        <div className="chart-card">
+          <h2 className="chart-title">New Users — Last 14 Days</h2>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={metrics.usersPerDay}>
+                <defs>
+                  <linearGradient id="usersGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#348cd4" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#348cd4" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatDate}
+                  stroke="#555"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#555"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: '#e8e8e8',
+                  }}
+                  labelFormatter={formatDate}
+                  formatter={(value: unknown) => [Number(value).toLocaleString(), 'Users']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#348cd4"
+                  strokeWidth={2}
+                  fill="url(#usersGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#348cd4', stroke: '#0a0a0a', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h2 className="chart-title">Top Users</h2>
+          <div className="gf-list">
+            {metrics.topUsers.map((user, i) => (
+              <div key={user.userId} className="gf-row">
+                <span className="gf-rank">{i + 1}</span>
+                <span className="gf-name">
+                  {user.phone || user.name || user.userId.slice(0, 8)}
+                </span>
+                <span className="gf-count">{user.count.toLocaleString()}</span>
+              </div>
+            ))}
+            {metrics.topUsers.length === 0 && (
               <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                 No data yet
               </p>

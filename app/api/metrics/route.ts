@@ -53,7 +53,6 @@ export async function GET(req: NextRequest) {
       .gte('created_at', fourteenDaysAgo.toISOString())
       .order('created_at', { ascending: true });
 
-    // Group by date
     const dailyMap: Record<string, number> = {};
     for (let i = 0; i < 14; i++) {
       const d = new Date();
@@ -70,6 +69,33 @@ export async function GET(req: NextRequest) {
     });
 
     const messagesPerDay = Object.entries(dailyMap).map(([date, count]) => ({
+      date,
+      count,
+    }));
+
+    // New users per day — last 14 days
+    const { data: usersRaw } = await supabase
+      .from('user_profiles')
+      .select('created_at')
+      .gte('created_at', fourteenDaysAgo.toISOString())
+      .order('created_at', { ascending: true });
+
+    const usersMap: Record<string, number> = {};
+    for (let i = 0; i < 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      const key = d.toISOString().split('T')[0];
+      usersMap[key] = 0;
+    }
+
+    usersRaw?.forEach((row) => {
+      const key = new Date(row.created_at).toISOString().split('T')[0];
+      if (usersMap[key] !== undefined) {
+        usersMap[key]++;
+      }
+    });
+
+    const usersPerDay = Object.entries(usersMap).map(([date, count]) => ({
       date,
       count,
     }));
@@ -99,13 +125,46 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
+    // Top users by message count with phone
+    const { data: userMessages } = await supabase
+      .from('chat_messages')
+      .select('user_id');
+
+    const userCountMap: Record<string, number> = {};
+    userMessages?.forEach((r) => {
+      userCountMap[r.user_id] = (userCountMap[r.user_id] || 0) + 1;
+    });
+
+    const topUserIds = Object.entries(userCountMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const { data: userProfiles } = await supabase
+      .from('user_profiles')
+      .select('supabase_auth_id, name, phone')
+      .in('supabase_auth_id', topUserIds.map(([id]) => id));
+
+    const profileMap: Record<string, { name: string | null; phone: string | null }> = {};
+    userProfiles?.forEach((p) => {
+      profileMap[p.supabase_auth_id] = { name: p.name, phone: p.phone };
+    });
+
+    const topUsers = topUserIds.map(([id, count]) => ({
+      userId: id,
+      name: profileMap[id]?.name || null,
+      phone: profileMap[id]?.phone || null,
+      count,
+    }));
+
     return NextResponse.json({
       totalUsers: totalUsers || 0,
       totalMessages: totalMessages || 0,
       activeToday,
       avgStage: Math.round(avgStage * 10) / 10,
       messagesPerDay,
+      usersPerDay,
       topGirlfriends,
+      topUsers,
     });
   } catch (error) {
     console.error('Metrics error:', error);
