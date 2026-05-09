@@ -1,65 +1,246 @@
-import Image from "next/image";
+// app/page.tsx
 
-export default function Home() {
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+
+interface Metrics {
+  totalUsers: number;
+  totalMessages: number;
+  activeToday: number;
+  avgStage: number;
+  messagesPerDay: { date: string; count: number }[];
+  topGirlfriends: { name: string; count: number }[];
+}
+
+export default function Dashboard() {
+  const [password, setPassword] = useState('');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchMetrics = useCallback(async (pwd: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/metrics', {
+        headers: { 'x-admin-password': pwd },
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          setAuthenticated(false);
+          setError('Invalid password');
+          return;
+        }
+        throw new Error('Failed to fetch');
+      }
+      const data = await res.json();
+      setMetrics(data);
+      setAuthenticated(true);
+    } catch {
+      setError('Failed to load metrics');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    fetchMetrics(password);
+  };
+
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    if (!authenticated) return;
+    const interval = setInterval(() => fetchMetrics(password), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [authenticated, password, fetchMetrics]);
+
+  // ── Login gate ──
+  if (!authenticated) {
+    return (
+      <div className="login-container">
+        <div className="login-card">
+          <h1 className="login-title">Polola IA</h1>
+          <p className="login-subtitle">Admin Dashboard</p>
+          <div className="login-form">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="login-input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleLogin(e);
+              }}
+              autoFocus
+            />
+            <button onClick={handleLogin} className="login-button" disabled={loading}>
+              {loading ? 'Checking...' : 'Enter'}
+            </button>
+          </div>
+          {error && <p className="login-error">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Loading state ──
+  if (!metrics) {
+    return (
+      <div className="loading-container">
+        <span className="loading-spinner" />
+        Loading metrics...
+      </div>
+    );
+  }
+
+  const stageLabel = (stage: number) => {
+    if (stage <= 1) return 'Blind Date';
+    if (stage <= 2) return 'Saliendo';
+    if (stage <= 3) return 'Andando';
+    return 'Pololos';
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="dashboard">
+      {/* Header */}
+      <header className="dashboard-header">
+        <div>
+          <h1 className="dashboard-title">Polola IA</h1>
+          <p className="dashboard-subtitle">
+            {new Date().toLocaleDateString('es-CL', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+            {' · '}
+            {new Date().toLocaleTimeString('es-CL', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <button
+          onClick={() => fetchMetrics(password)}
+          className="refresh-button"
+          disabled={loading}
+        >
+          {loading ? '↻' : '↻ Refresh'}
+        </button>
+      </header>
+
+      {/* Stat Cards */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span className="stat-label">Total Users</span>
+          <span className="stat-value">{metrics.totalUsers.toLocaleString()}</span>
         </div>
-      </main>
+        <div className="stat-card">
+          <span className="stat-label">Total Messages</span>
+          <span className="stat-value">{metrics.totalMessages.toLocaleString()}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Active Today</span>
+          <span className="stat-value">{metrics.activeToday.toLocaleString()}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Avg. Stage</span>
+          <span className="stat-value">{metrics.avgStage}</span>
+          <span className="stat-detail">~ {stageLabel(metrics.avgStage)}</span>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="charts-grid">
+        {/* Messages per day chart */}
+        <div className="chart-card">
+          <h2 className="chart-title">Messages — Last 14 Days</h2>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={metrics.messagesPerDay}>
+                <defs>
+                  <linearGradient id="msgGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#e60049" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#e60049" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatDate}
+                  stroke="#555"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#555"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: '#e8e8e8',
+                  }}
+                  labelFormatter={formatDate}
+                  formatter={(value: number) => [value.toLocaleString(), 'Messages']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#e60049"
+                  strokeWidth={2}
+                  fill="url(#msgGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#e60049', stroke: '#0a0a0a', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Top girlfriends */}
+        <div className="chart-card">
+          <h2 className="chart-title">Top Characters</h2>
+          <div className="gf-list">
+            {metrics.topGirlfriends.map((gf, i) => (
+              <div key={gf.name} className="gf-row">
+                <span className="gf-rank">{i + 1}</span>
+                <span className="gf-name">{gf.name}</span>
+                <span className="gf-count">{gf.count.toLocaleString()}</span>
+              </div>
+            ))}
+            {metrics.topGirlfriends.length === 0 && (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                No data yet
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
