@@ -62,7 +62,7 @@ export default function Dashboard() {
   // Auto-refresh every 5 minutes
   useEffect(() => {
     if (!authenticated) return;
-    const interval = setInterval(() => fetchMetrics(password), 5 * 60 * 1000);
+    const interval = setInterval(() => fetchMetrics(password), 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, [authenticated, password, fetchMetrics]);
 
@@ -112,8 +112,8 @@ export default function Dashboard() {
     return 'Pololos';
   };
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr + 'T12:00:00');
+  const formatDate = (value: string | number) => {
+    const d = new Date(String(value) + 'T12:00:00');
     return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
   };
 
@@ -206,7 +206,7 @@ export default function Dashboard() {
                     color: '#e8e8e8',
                   }}
                   labelFormatter={formatDate}
-                  formatter={(value: number) => [value.toLocaleString(), 'Messages']}
+                  formatter={(value: unknown) => [Number(value).toLocaleString(), 'Messages']}
                 />
                 <Area
                   type="monotone"
