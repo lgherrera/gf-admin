@@ -12,7 +12,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import Nav from './components/Nav';
+import Nav from './components/nav';
 
 interface Metrics {
   totalUsers: number;

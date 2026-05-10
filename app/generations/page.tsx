@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Nav from '../components/Nav';
+import Nav from '../components/nav';
 
 interface Generation {
   id: string;
