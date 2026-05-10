@@ -1,4 +1,4 @@
-/* app/globals.css */
+/* /app/globals.css */
 
 @import 'tailwindcss';
 
@@ -311,11 +311,197 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* ── Nav ── */
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 16px 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text-primary);
+  margin-right: 8px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-link {
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+.nav-link-active {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+/* ── Feed Pages ── */
+
+.feed-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+
+.feed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.feed-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.feed-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* ── Table ── */
+
+.feed-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.feed-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  position: sticky;
+  top: 0;
+}
+
+.feed-table td {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.feed-table tr:last-child td {
+  border-bottom: none;
+}
+
+.feed-table tr:hover td {
+  background: var(--bg-card-hover);
+}
+
+.td-time {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.td-user {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.td-character {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.td-message {
+  max-width: 500px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.td-prompt {
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.td-role {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.td-role-user {
+  color: var(--blue);
+}
+
+.td-role-ai {
+  color: var(--accent);
+}
+
+.load-more-button {
+  display: block;
+  margin: 20px auto;
+  padding: 10px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.load-more-button:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.load-more-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Responsive ── */
 
 @media (max-width: 900px) {
-  .dashboard {
+  .dashboard, .feed-page {
     padding: 24px 20px;
+  }
+
+  .nav {
+    padding: 12px 20px;
+    gap: 16px;
   }
 
   .stats-grid {
@@ -334,5 +520,9 @@ body {
 
   .stat-value {
     font-size: 26px;
+  }
+
+  .feed-table {
+    font-size: 12px;
   }
 }

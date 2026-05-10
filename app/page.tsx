@@ -12,6 +12,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import Nav from './components/Nav';
 
 interface Metrics {
   totalUsers: number;
@@ -71,6 +72,22 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [authenticated, password, fetchMetrics]);
 
+  // Check if password is in sessionStorage
+  useEffect(() => {
+    const saved = sessionStorage.getItem('admin-pwd');
+    if (saved) {
+      setPassword(saved);
+      fetchMetrics(saved);
+    }
+  }, [fetchMetrics]);
+
+  // Save password on successful auth
+  useEffect(() => {
+    if (authenticated && password) {
+      sessionStorage.setItem('admin-pwd', password);
+    }
+  }, [authenticated, password]);
+
   // ── Login gate ──
   if (!authenticated) {
     return (
@@ -124,7 +141,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="dashboard">
+    <>
+      <Nav />
+      <div className="dashboard">
       {/* Header */}
       <header className="dashboard-header">
         <div>
@@ -399,6 +418,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
