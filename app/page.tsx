@@ -23,8 +23,8 @@ interface Metrics {
   imagesPerDay: { date: string; count: number }[];
   usersPerDay: { date: string; count: number }[];
   topGirlfriends: { name: string; count: number }[];
-  topGenerators: { userId: string; name: string | null; phone: string | null; count: number }[];
-  topUsers: { userId: string; name: string | null; phone: string | null; count: number }[];
+  topGenerators: { userId: string; name: string | null; msisdn: string | null; count: number }[];
+  topUsers: { userId: string; name: string | null; msisdn: string | null; count: number }[];
 }
 
 export default function Dashboard() {
@@ -311,7 +311,7 @@ export default function Dashboard() {
               <div key={user.userId} className="gf-row">
                 <span className="gf-rank">{i + 1}</span>
                 <span className="gf-name">
-                  {user.phone || user.name || user.userId.slice(0, 8)}
+                  {user.msisdn || user.name || user.userId.slice(0, 8)}
                 </span>
                 <span className="gf-count">{user.count.toLocaleString()}</span>
               </div>
@@ -386,7 +386,7 @@ export default function Dashboard() {
               <div key={user.userId} className="gf-row">
                 <span className="gf-rank">{i + 1}</span>
                 <span className="gf-name">
-                  {user.phone || user.name || user.userId.slice(0, 8)}
+                  {user.msisdn || user.name || user.userId.slice(0, 8)}
                 </span>
                 <span className="gf-count">{user.count.toLocaleString()}</span>
               </div>

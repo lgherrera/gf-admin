@@ -141,29 +141,100 @@ export async function GET(req: NextRequest) {
 
     const { data: userProfiles } = await supabase
       .from('user_profiles')
-      .select('supabase_auth_id, name, phone')
+      .select('supabase_auth_id, name, msisdn')
       .in('supabase_auth_id', topUserIds.map(([id]) => id));
 
-    const profileMap: Record<string, { name: string | null; phone: string | null }> = {};
+    const profileMap: Record<string, { name: string | null; msisdn: string | null }> = {};
     userProfiles?.forEach((p) => {
-      profileMap[p.supabase_auth_id] = { name: p.name, phone: p.phone };
+      profileMap[p.supabase_auth_id] = { name: p.name, msisdn: p.msisdn };
     });
 
     const topUsers = topUserIds.map(([id, count]) => ({
       userId: id,
       name: profileMap[id]?.name || null,
-      phone: profileMap[id]?.phone || null,
+      msisdn: profileMap[id]?.msisdn || null,
+      count,
+    }));
+
+    // Generated images per day — last 14 days
+    const { data: imagesRaw } = await supabase
+      .from('generated_images')
+      .select('created_at')
+      .gte('created_at', fourteenDaysAgo.toISOString())
+      .order('created_at', { ascending: true });
+
+    const imagesMap: Record<string, number> = {};
+    for (let i = 0; i < 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      const key = d.toISOString().split('T')[0];
+      imagesMap[key] = 0;
+    }
+
+    imagesRaw?.forEach((row) => {
+      const key = new Date(row.created_at).toISOString().split('T')[0];
+      if (imagesMap[key] !== undefined) {
+        imagesMap[key]++;
+      }
+    });
+
+    const imagesPerDay = Object.entries(imagesMap).map(([date, count]) => ({
+      date,
+      count,
+    }));
+
+    // Total generated images
+    const { count: totalImages } = await supabase
+      .from('generated_images')
+      .select('*', { count: 'exact', head: true });
+
+    // Top generators by image count with phone
+    const { data: genImages } = await supabase
+      .from('generated_images')
+      .select('user_id');
+
+    const genCountMap: Record<string, number> = {};
+    genImages?.forEach((r) => {
+      genCountMap[r.user_id] = (genCountMap[r.user_id] || 0) + 1;
+    });
+
+    const topGenIds = Object.entries(genCountMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    // Fetch profiles for generators (reuse existing profiles where possible)
+    const allGenIds = topGenIds.map(([id]) => id);
+    const missingGenIds = allGenIds.filter((id) => !profileMap[id]);
+
+    if (missingGenIds.length > 0) {
+      const { data: genProfiles } = await supabase
+        .from('user_profiles')
+        .select('supabase_auth_id, name, msisdn')
+        .in('supabase_auth_id', missingGenIds);
+
+      genProfiles?.forEach((p) => {
+        profileMap[p.supabase_auth_id] = { name: p.name, msisdn: p.msisdn };
+      });
+    }
+
+    const topGenerators = topGenIds.map(([id, count]) => ({
+      userId: id,
+      name: profileMap[id]?.name || null,
+      msisdn: profileMap[id]?.msisdn || null,
       count,
     }));
 
     return NextResponse.json({
       totalUsers: totalUsers || 0,
       totalMessages: totalMessages || 0,
+      totalImages: totalImages || 0,
       activeToday,
       avgStage: Math.round(avgStage * 10) / 10,
       messagesPerDay,
+      imagesPerDay,
       usersPerDay,
       topGirlfriends,
+      topGenerators,
       topUsers,
     });
   } catch (error) {
