@@ -287,9 +287,18 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* Reference Images */}
+          {error && <div className="gen-error">{error}</div>}
+
+          <button className="gen-button" onClick={handleGenerate} disabled={loading}>
+            {loading ? 'Generating...' : 'Generate Image'}
+          </button>
+        </div>
+
+        {/* Right: Preview */}
+        <div className="gen-preview-panel">
+          {/* Reference Images — above preview */}
           {showRefs && (
-            <div className="gen-field">
+            <div className="gen-field" style={{ width: '100%', maxWidth: 500 }}>
               <label className="gen-label">
                 Reference Images <span className="gen-optional">(optional)</span>
               </label>
@@ -334,15 +343,6 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {error && <div className="gen-error">{error}</div>}
-
-          <button className="gen-button" onClick={handleGenerate} disabled={loading}>
-            {loading ? 'Generating...' : 'Generate Image'}
-          </button>
-        </div>
-
-        {/* Right: Preview */}
-        <div className="gen-preview-panel">
           <div className="gen-preview-frame" style={{ aspectRatio: previewAspect }}>
             {loading && (
               <div className="gen-loading">
