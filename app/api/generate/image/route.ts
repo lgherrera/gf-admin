@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { fal } from "@fal-ai/client";
+import Replicate from "replicate";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -46,6 +47,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Prompt required" }, { status: 400 });
     }
 
+    // ── Replicate branch ──
+    if (model === "seedream-r") {
+      if (!process.env.REPLICATE_API_TOKEN) {
+        return NextResponse.json({ error: "REPLICATE_API_TOKEN not configured" }, { status: 500 });
+      }
+
+      const replicate = new Replicate();
+
+      // Build input
+      const replicateInput: Record<string, unknown> = {
+        prompt,
+        aspect_ratio: aspectRatio,
+        size: "4K",
+      };
+
+      // Add reference images if provided
+      if (referenceImages?.length) {
+        replicateInput.image_input = referenceImages.map(
+          (b64) => `data:image/jpeg;base64,${b64}`
+        );
+      }
+
+      const output = await replicate.run("bytedance/seedream-4.5", {
+        input: replicateInput,
+      });
+
+      // Output is an array of FileOutput objects
+      const outputArray = output as Array<{ url: () => string }>;
+      const imageUrl = outputArray?.[0]?.url?.() || String(outputArray?.[0]);
+
+      if (!imageUrl) {
+        return NextResponse.json(
+          { error: `Unexpected Replicate response: ${JSON.stringify(output).slice(0, 300)}` },
+          { status: 502 }
+        );
+      }
+
+      return NextResponse.json({ url: imageUrl, seed: null });
+    }
+
+    // ── fal.ai branch ──
     if (!process.env.FAL_KEY) {
       return NextResponse.json({ error: "FAL_KEY not configured" }, { status: 500 });
     }

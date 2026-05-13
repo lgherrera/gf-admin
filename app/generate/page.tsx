@@ -51,7 +51,7 @@ export default function GeneratePage() {
   const isV5 = model === 'seedream5';
   const isReplicate = model === 'seedream-r';
   const showSeed = !isV5 && !isReplicate;
-  const showRefs = model === 'seedream';
+  const showRefs = model === 'seedream' || model === 'seedream-r';
 
   // Session persistence
   useEffect(() => {
