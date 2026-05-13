@@ -9,6 +9,7 @@ const links = [
   { href: '/', label: 'Dashboard' },
   { href: '/messages', label: 'Messages' },
   { href: '/generations', label: 'Generations' },
+  { href: '/generate', label: 'Generate' },
 ];
 
 export default function Nav() {
