@@ -12,7 +12,8 @@ const ASPECT_RATIOS = [
 ];
 
 const MODELS = [
-  { label: 'Seedream 4.5', value: 'seedream', sub: 'ByteDance' },
+  { label: 'Seedream 4.5', value: 'seedream', sub: 'ByteDance · fal' },
+  { label: 'Seedream 4.5', value: 'seedream-r', sub: 'ByteDance · Replicate' },
   { label: 'Seedream 5', value: 'seedream5', sub: 'ByteDance · Lite' },
   { label: 'Flux 2 Dev', value: 'flux2dev', sub: 'Black Forest Labs' },
   { label: 'Flux 2 Max', value: 'flux2max', sub: 'Black Forest Labs' },
@@ -48,7 +49,8 @@ export default function GeneratePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isV5 = model === 'seedream5';
-  const showSeed = !isV5;
+  const isReplicate = model === 'seedream-r';
+  const showSeed = !isV5 && !isReplicate;
   const showRefs = model === 'seedream';
 
   // Session persistence
