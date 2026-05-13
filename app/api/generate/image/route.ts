@@ -22,6 +22,7 @@ const RATIO_TO_SIZE_V5: Record<string, string> = {
 const MODEL_ENDPOINTS: Record<string, string> = {
   seedream: "fal-ai/bytedance/seedream/v4.5/text-to-image",
   seedream5: "fal-ai/bytedance/seedream/v5/lite/text-to-image",
+  flux1dev: "fal-ai/flux/dev",
   flux2dev: "fal-ai/flux-2",
   flux2max: "fal-ai/flux-2-max",
   wan25: "fal-ai/wan-25-preview/text-to-image",
@@ -92,9 +93,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "FAL_KEY not configured" }, { status: 500 });
     }
 
-    const isFlux = model === "flux2dev" || model === "flux2max";
+    const isFlux = model === "flux1dev" || model === "flux2dev" || model === "flux2max";
     const isFluxMax = model === "flux2max";
     const isFluxDev = model === "flux2dev";
+    const isFlux1Dev = model === "flux1dev";
     const isV5 = model === "seedream5";
     const isWan = model === "wan25";
     const isHunyuan = model === "hunyuan3";
@@ -128,6 +130,7 @@ export async function POST(req: NextRequest) {
       enable_safety_checker: false,
       ...(isFluxMax && { safety_tolerance: "5" }),
       ...(isFluxDev && { guidance_scale: 3.5, safety_tolerance: "6" }),
+      ...(isFlux1Dev && { guidance_scale: 3.5 }),
       ...(isHunyuan && { guidance_scale: 7.5, enable_prompt_expansion: false }),
     };
 

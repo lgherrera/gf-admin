@@ -15,6 +15,7 @@ const MODELS = [
   { label: 'Seedream 4.5', value: 'seedream', sub: 'ByteDance · fal' },
   { label: 'Seedream 4.5', value: 'seedream-r', sub: 'ByteDance · Replicate' },
   { label: 'Seedream 5', value: 'seedream5', sub: 'ByteDance · Lite' },
+  { label: 'Flux 1 Dev', value: 'flux1dev', sub: 'Black Forest Labs' },
   { label: 'Flux 2 Dev', value: 'flux2dev', sub: 'Black Forest Labs' },
   { label: 'Flux 2 Max', value: 'flux2max', sub: 'Black Forest Labs' },
   { label: 'Wan 2.5', value: 'wan25', sub: 'Alibaba' },
