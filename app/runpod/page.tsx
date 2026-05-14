@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Nav from '../components/nav';
 
 const ASPECT_RATIOS = [
@@ -31,8 +31,12 @@ export default function RunPodPage() {
   const [steps, setSteps] = useState('15');
   const [guidance, setGuidance] = useState('3.5');
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GeneratedImage | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Session persistence
   useEffect(() => {
@@ -43,10 +47,52 @@ export default function RunPodPage() {
     }
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
     sessionStorage.setItem('admin-pwd', password);
     setAuthenticated(true);
+  };
+
+  const pollStatus = (jobId: string, currentPrompt: string, currentRatio: string) => {
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/runpod/status?id=${jobId}`, {
+          headers: { 'x-admin-password': password },
+        });
+        const data = await res.json();
+
+        setStatus(data.status);
+
+        if (data.status === 'COMPLETED') {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
+          setResult({
+            url: data.url,
+            prompt: currentPrompt,
+            ratio: currentRatio,
+            seed: data.seed ?? null,
+          });
+          setLoading(false);
+          setStatus(null);
+        } else if (data.status === 'FAILED') {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
+          setError(data.error || 'Job failed');
+          setLoading(false);
+          setStatus(null);
+        }
+      } catch {
+        // Keep polling on network errors
+      }
+    }, 3000);
   };
 
   const handleGenerate = async () => {
@@ -57,6 +103,15 @@ export default function RunPodPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setStatus('STARTING');
+    setElapsed(0);
+
+    // Start elapsed timer
+    const startTime = Date.now();
+    timerRef.current = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+
     try {
       const parsedSeed = seed.trim() !== '' ? parseInt(seed, 10) : undefined;
 
@@ -76,19 +131,15 @@ export default function RunPodPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Generation failed');
-      if (!data.url) throw new Error('No image received');
+      if (!res.ok) throw new Error(data.error || 'Failed to start job');
 
-      setResult({
-        url: data.url,
-        prompt,
-        ratio,
-        seed: data.seed ?? null,
-      });
+      setStatus(data.status || 'IN_QUEUE');
+      pollStatus(data.jobId, prompt, ratio);
     } catch (err: unknown) {
+      if (timerRef.current) clearInterval(timerRef.current);
       setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
       setLoading(false);
+      setStatus(null);
     }
   };
 
@@ -128,6 +179,16 @@ export default function RunPodPage() {
   }
 
   const previewAspect = `${RATIO_W[ratio]} / ${RATIO_H[ratio]}`;
+
+  const statusLabel = () => {
+    if (!status) return '';
+    const labels: Record<string, string> = {
+      STARTING: 'Starting job...',
+      IN_QUEUE: 'In queue...',
+      IN_PROGRESS: 'Generating...',
+    };
+    return `${labels[status] || status} (${elapsed}s)`;
+  };
 
   return (
     <>
@@ -230,7 +291,7 @@ export default function RunPodPage() {
           {error && <div className="gen-error">{error}</div>}
 
           <button className="gen-button" onClick={handleGenerate} disabled={loading}>
-            {loading ? 'Generating...' : 'Generate Image'}
+            {loading ? statusLabel() : 'Generate Image'}
           </button>
         </div>
 
@@ -240,7 +301,7 @@ export default function RunPodPage() {
             {loading && (
               <div className="gen-loading">
                 <div className="loading-spinner" />
-                <p>Generating on RunPod...</p>
+                <p>{statusLabel()}</p>
               </div>
             )}
             {result && !loading ? (

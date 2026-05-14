@@ -2,10 +2,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "nodejs";
-export const maxDuration = 120;
+export const dynamic = "force-dynamic";
 
-const RUNPOD_ENDPOINT = "https://api.runpod.ai/v2/byhdkbaav3jnkh/runsync";
+const RUNPOD_ENDPOINT = "https://api.runpod.ai/v2/byhdkbaav3jnkh/run";
 
 const ASPECT_TO_SIZE: Record<string, { width: number; height: number }> = {
   "16:9": { width: 1536, height: 864 },
@@ -62,30 +61,17 @@ export async function POST(req: NextRequest) {
 
     const data = await res.json();
 
-    if (!res.ok || data.status !== "COMPLETED") {
+    if (!res.ok || !data.id) {
       return NextResponse.json(
-        { error: data.error || `RunPod status: ${data.status}` },
+        { error: data.error || "Failed to start RunPod job" },
         { status: 502 }
       );
     }
 
-    const base64 = data.output?.image_base64;
-    const returnedSeed = data.output?.seed ?? null;
-
-    if (!base64) {
-      return NextResponse.json(
-        { error: `No image in response: ${JSON.stringify(data).slice(0, 300)}` },
-        { status: 502 }
-      );
-    }
-
-    // Return as data URI so the frontend can display it directly
-    const url = `data:image/png;base64,${base64}`;
-
-    return NextResponse.json({ url, seed: returnedSeed });
+    return NextResponse.json({ jobId: data.id, status: data.status });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    console.error("RunPod error:", msg);
+    console.error("RunPod start error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
