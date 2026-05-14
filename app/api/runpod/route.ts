@@ -7,13 +7,13 @@ export const dynamic = "force-dynamic";
 const ENDPOINTS: Record<string, string> = {
   flux: "https://api.runpod.ai/v2/byhdkbaav3jnkh/run",
   sdxl_full: "https://api.runpod.ai/v2/0gjnd5ue2fdcjf/run",
-  sdxl_lightning: "https://api.runpod.ai/v2/l8kd9k2x0jfl0p/run",
+  chroma: "https://api.runpod.ai/v2/biqpb4i8t2s0iz/run",
 };
 
 const MODEL_DEFAULTS: Record<string, { steps: number; guidance: number; strength: number }> = {
   flux: { steps: 15, guidance: 3.5, strength: 0.85 },
   sdxl_full: { steps: 30, guidance: 5.0, strength: 0.7 },
-  sdxl_lightning: { steps: 6, guidance: 1.5, strength: 0.7 },
+  chroma: { steps: 40, guidance: 3.0, strength: 0.75 },
 };
 
 const ASPECT_TO_SIZE: Record<string, { width: number; height: number }> = {
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       input.strength = strength ?? defaults.strength;
     }
 
-    // SDXL models support negative prompts
+    // SDXL and Chroma support negative prompts
     if (selectedModel !== "flux" && negative_prompt) {
       input.negative_prompt = negative_prompt;
     }

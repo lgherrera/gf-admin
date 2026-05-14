@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const STATUS_BASES: Record<string, string> = {
   flux: "https://api.runpod.ai/v2/byhdkbaav3jnkh/status",
   sdxl_full: "https://api.runpod.ai/v2/0gjnd5ue2fdcjf/status",
-  sdxl_lightning: "https://api.runpod.ai/v2/l8kd9k2x0jfl0p/status",
+  chroma: "https://api.runpod.ai/v2/biqpb4i8t2s0iz/status",
 };
 
 export async function GET(req: NextRequest) {

@@ -7,20 +7,20 @@ import Nav from '../components/nav';
 
 const MODELS = [
   { label: 'FLUX Dev', value: 'flux', desc: 'Best quality · ~30s' },
-  { label: 'RealVisXL', value: 'sdxl_full', desc: 'Great quality · ~15s' },
-  { label: 'RealVisXL ⚡', value: 'sdxl_lightning', desc: 'Good quality · ~3s' },
+  { label: 'RealVisXL', value: 'sdxl_full', desc: 'Photorealistic SDXL · ~15s' },
+  { label: 'Chroma HD', value: 'chroma', desc: 'Uncensored Flux · ~40s' },
 ];
 
 const MODEL_DEFAULTS: Record<string, { steps: string; guidance: string; strength: string }> = {
   flux: { steps: '15', guidance: '3.5', strength: '0.85' },
   sdxl_full: { steps: '30', guidance: '5.0', strength: '0.7' },
-  sdxl_lightning: { steps: '6', guidance: '1.5', strength: '0.7' },
+  chroma: { steps: '40', guidance: '3.0', strength: '0.75' },
 };
 
 const MODEL_LABELS: Record<string, string> = {
   flux: 'FLUX Dev',
   sdxl_full: 'RealVisXL',
-  sdxl_lightning: 'RealVisXL ⚡',
+  chroma: 'Chroma HD',
 };
 
 const ASPECT_RATIOS = [
@@ -47,7 +47,7 @@ export default function RunPodPage() {
   const [model, setModel] = useState('flux');
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState(
-    'blurry, ugly, deformed, low quality, bad anatomy, bad hands, extra fingers'
+    'low quality, ugly, unfinished, out of focus, deformed, disfigure, blurry, smudged, restricted palette, flat colors'
   );
   const [ratio, setRatio] = useState('9:16');
   const [seed, setSeed] = useState('');
@@ -197,6 +197,7 @@ export default function RunPodPage() {
         body.strength = parseFloat(strength);
       }
 
+      // SDXL and Chroma support negative prompts
       if (model !== 'flux' && negativePrompt.trim()) {
         body.negative_prompt = negativePrompt;
       }
@@ -268,7 +269,7 @@ export default function RunPodPage() {
 
   const previewAspect = `${RATIO_W[ratio]} / ${RATIO_H[ratio]}`;
   const modelLabel = MODEL_LABELS[model] ?? model;
-  const isSDXL = model !== 'flux';
+  const supportsNegative = model !== 'flux';
 
   const statusLabel = () => {
     if (!status) return '';
@@ -324,11 +325,11 @@ export default function RunPodPage() {
             <div className="gen-char-count">{prompt.length} chars</div>
           </div>
 
-          {/* Negative Prompt (SDXL only) */}
-          {isSDXL && (
+          {/* Negative Prompt */}
+          {supportsNegative && (
             <div className="gen-field">
               <label className="gen-label">
-                Negative Prompt <span className="gen-optional">(SDXL only)</span>
+                Negative Prompt <span className="gen-optional">({modelLabel})</span>
               </label>
               <textarea
                 className="gen-textarea"
@@ -543,7 +544,7 @@ export default function RunPodPage() {
           {result && !loading && (
             <div className="gen-download-bar">
               <span className="gen-seed-badge">
-                {MODEL_LABELS[result.model] ?? result.model} · Seed: {result.seed ?? 'auto'} · {result.model !== 'flux' ? 'SDXL' : 'FLUX'}
+                {MODEL_LABELS[result.model] ?? result.model} · Seed: {result.seed ?? 'auto'}
               </span>
               <div className="gen-download-btns">
                 <button className="gen-dl-btn" onClick={() => downloadImage('png')}>
