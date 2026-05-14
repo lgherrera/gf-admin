@@ -5,6 +5,24 @@
 import { useState, useEffect, useRef } from 'react';
 import Nav from '../components/nav';
 
+const MODELS = [
+  { label: 'FLUX Dev', value: 'flux', desc: 'Best quality · ~30s' },
+  { label: 'RealVisXL', value: 'sdxl_full', desc: 'Great quality · ~15s' },
+  { label: 'RealVisXL ⚡', value: 'sdxl_lightning', desc: 'Good quality · ~3s' },
+];
+
+const MODEL_DEFAULTS: Record<string, { steps: string; guidance: string; strength: string }> = {
+  flux: { steps: '15', guidance: '3.5', strength: '0.85' },
+  sdxl_full: { steps: '30', guidance: '5.0', strength: '0.7' },
+  sdxl_lightning: { steps: '6', guidance: '1.5', strength: '0.7' },
+};
+
+const MODEL_LABELS: Record<string, string> = {
+  flux: 'FLUX Dev',
+  sdxl_full: 'RealVisXL',
+  sdxl_lightning: 'RealVisXL ⚡',
+};
+
 const ASPECT_RATIOS = [
   { label: '16:9', value: '16:9' },
   { label: '9:16', value: '9:16' },
@@ -20,12 +38,17 @@ interface GeneratedImage {
   prompt: string;
   ratio: string;
   seed: number | null;
+  model: string;
 }
 
 export default function RunPodPage() {
   const [password, setPassword] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
+  const [model, setModel] = useState('flux');
   const [prompt, setPrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState(
+    'blurry, ugly, deformed, low quality, bad anatomy, bad hands, extra fingers'
+  );
   const [ratio, setRatio] = useState('9:16');
   const [seed, setSeed] = useState('');
   const [steps, setSteps] = useState('15');
@@ -42,7 +65,6 @@ export default function RunPodPage() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Session persistence
   useEffect(() => {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
@@ -51,13 +73,20 @@ export default function RunPodPage() {
     }
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  const handleModelChange = (newModel: string) => {
+    setModel(newModel);
+    const defaults = MODEL_DEFAULTS[newModel];
+    setSteps(defaults.steps);
+    setGuidance(defaults.guidance);
+    setStrength(defaults.strength);
+  };
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
@@ -74,14 +103,11 @@ export default function RunPodPage() {
       setError('Image must be under 10MB');
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
       setRefPreview(dataUrl);
-      // Extract base64 without the data:image/...;base64, prefix
-      const base64 = dataUrl.split(',')[1];
-      setRefImage(base64);
+      setRefImage(dataUrl.split(',')[1]);
       setError(null);
     };
     reader.readAsDataURL(file);
@@ -103,14 +129,13 @@ export default function RunPodPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const pollStatus = (jobId: string, currentPrompt: string, currentRatio: string) => {
+  const pollStatus = (jobId: string, currentPrompt: string, currentRatio: string, currentModel: string) => {
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/runpod/status?id=${jobId}`, {
+        const res = await fetch(`/api/runpod/status?id=${jobId}&model=${currentModel}`, {
           headers: { 'x-admin-password': password },
         });
         const data = await res.json();
-
         setStatus(data.status);
 
         if (data.status === 'COMPLETED') {
@@ -121,6 +146,7 @@ export default function RunPodPage() {
             prompt: currentPrompt,
             ratio: currentRatio,
             seed: data.seed ?? null,
+            model: currentModel,
           });
           setLoading(false);
           setStatus(null);
@@ -132,7 +158,7 @@ export default function RunPodPage() {
           setStatus(null);
         }
       } catch {
-        // Keep polling on network errors
+        // Keep polling
       }
     }, 3000);
   };
@@ -148,7 +174,6 @@ export default function RunPodPage() {
     setStatus('STARTING');
     setElapsed(0);
 
-    // Start elapsed timer
     const startTime = Date.now();
     timerRef.current = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTime) / 1000));
@@ -162,6 +187,7 @@ export default function RunPodPage() {
         aspectRatio: ratio,
         steps: parseInt(steps, 10),
         guidance: parseFloat(guidance),
+        model,
       };
 
       if (parsedSeed !== undefined) body.seed = parsedSeed;
@@ -169,6 +195,10 @@ export default function RunPodPage() {
       if (refImage) {
         body.image_base64 = refImage;
         body.strength = parseFloat(strength);
+      }
+
+      if (model !== 'flux' && negativePrompt.trim()) {
+        body.negative_prompt = negativePrompt;
       }
 
       const res = await fetch('/api/runpod', {
@@ -184,7 +214,7 @@ export default function RunPodPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to start job');
 
       setStatus(data.status || 'IN_QUEUE');
-      pollStatus(data.jobId, prompt, ratio);
+      pollStatus(data.jobId, prompt, ratio, model);
     } catch (err: unknown) {
       if (timerRef.current) clearInterval(timerRef.current);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -205,7 +235,7 @@ export default function RunPodPage() {
     if (!result) return;
     const a = document.createElement('a');
     a.href = result.url;
-    a.download = `runpod-${Date.now()}.${format}`;
+    a.download = `runpod-${result.model}-${Date.now()}.${format}`;
     a.click();
   };
 
@@ -237,6 +267,8 @@ export default function RunPodPage() {
   }
 
   const previewAspect = `${RATIO_W[ratio]} / ${RATIO_H[ratio]}`;
+  const modelLabel = MODEL_LABELS[model] ?? model;
+  const isSDXL = model !== 'flux';
 
   const statusLabel = () => {
     if (!status) return '';
@@ -252,12 +284,32 @@ export default function RunPodPage() {
     <>
       <Nav />
       <div className="gen-page">
-        {/* Left: Controls */}
         <div className="gen-controls">
-          <h1 className="gen-title">RunPod — Flux 1 Dev</h1>
+          <h1 className="gen-title">RunPod — {modelLabel}</h1>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '-12px' }}>
             No safety filters · Your infrastructure
           </p>
+
+          {/* Model Selector */}
+          <div className="gen-field">
+            <label className="gen-label">Model</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {MODELS.map((m) => (
+                <button
+                  key={m.value}
+                  className={`gen-ratio-btn ${model === m.value ? 'gen-ratio-active' : ''}`}
+                  onClick={() => handleModelChange(m.value)}
+                  disabled={loading}
+                  style={{ textAlign: 'left', padding: '10px 14px' }}
+                >
+                  <span style={{ fontWeight: 600 }}>{m.label}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                    {m.desc}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Prompt */}
           <div className="gen-field">
@@ -272,17 +324,29 @@ export default function RunPodPage() {
             <div className="gen-char-count">{prompt.length} chars</div>
           </div>
 
+          {/* Negative Prompt (SDXL only) */}
+          {isSDXL && (
+            <div className="gen-field">
+              <label className="gen-label">
+                Negative Prompt <span className="gen-optional">(SDXL only)</span>
+              </label>
+              <textarea
+                className="gen-textarea"
+                placeholder="Things to avoid..."
+                value={negativePrompt}
+                onChange={(e) => setNegativePrompt(e.target.value)}
+                rows={2}
+              />
+            </div>
+          )}
+
           {/* Reference Image */}
           <div className="gen-field">
             <label className="gen-label">
               Reference Image <span className="gen-optional">(optional — enables img2img)</span>
             </label>
             {refPreview ? (
-              <div style={{
-                position: 'relative',
-                display: 'inline-block',
-                marginBottom: '8px',
-              }}>
+              <div style={{ position: 'relative', display: 'inline-block', marginBottom: '8px' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={refPreview}
@@ -329,7 +393,6 @@ export default function RunPodPage() {
                   cursor: 'pointer',
                   color: 'var(--text-muted)',
                   fontSize: '14px',
-                  transition: 'border-color 0.2s',
                 }}
               >
                 Drop an image here or click to upload
@@ -347,7 +410,7 @@ export default function RunPodPage() {
             />
           </div>
 
-          {/* Strength (only show when reference image is set) */}
+          {/* Strength */}
           {refImage && (
             <div className="gen-field">
               <label className="gen-label">
@@ -362,12 +425,7 @@ export default function RunPodPage() {
                 onChange={(e) => setStrength(e.target.value)}
                 style={{ width: '100%' }}
               />
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-              }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
                 <span>Subtle changes</span>
                 <span>Heavy transformation</span>
               </div>
@@ -453,9 +511,12 @@ export default function RunPodPage() {
           <button
             className="gen-button"
             onClick={loading ? handleCancel : handleGenerate}
-            disabled={false}
           >
-            {loading ? `Cancel (${statusLabel()})` : refImage ? 'Generate (img2img)' : 'Generate Image'}
+            {loading
+              ? `Cancel (${statusLabel()})`
+              : refImage
+              ? `Generate (${modelLabel} · img2img)`
+              : `Generate (${modelLabel})`}
           </button>
         </div>
 
@@ -482,7 +543,7 @@ export default function RunPodPage() {
           {result && !loading && (
             <div className="gen-download-bar">
               <span className="gen-seed-badge">
-                Seed: {result.seed ?? 'auto'} · {refImage ? 'img2img' : 'txt2img'}
+                {MODEL_LABELS[result.model] ?? result.model} · Seed: {result.seed ?? 'auto'} · {result.model !== 'flux' ? 'SDXL' : 'FLUX'}
               </span>
               <div className="gen-download-btns">
                 <button className="gen-dl-btn" onClick={() => downloadImage('png')}>

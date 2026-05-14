@@ -4,7 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const RUNPOD_STATUS_BASE = "https://api.runpod.ai/v2/byhdkbaav3jnkh/status";
+const STATUS_BASES: Record<string, string> = {
+  flux: "https://api.runpod.ai/v2/byhdkbaav3jnkh/status",
+  sdxl_full: "https://api.runpod.ai/v2/0gjnd5ue2fdcjf/status",
+  sdxl_lightning: "https://api.runpod.ai/v2/l8kd9k2x0jfl0p/status",
+};
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,6 +18,8 @@ export async function GET(req: NextRequest) {
     }
 
     const jobId = req.nextUrl.searchParams.get("id");
+    const model = req.nextUrl.searchParams.get("model") ?? "flux";
+
     if (!jobId) {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
     }
@@ -22,7 +28,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "RUNPOD_API_KEY not configured" }, { status: 500 });
     }
 
-    const res = await fetch(`${RUNPOD_STATUS_BASE}/${jobId}`, {
+    const statusBase = STATUS_BASES[model] ?? STATUS_BASES.flux;
+
+    const res = await fetch(`${statusBase}/${jobId}`, {
       headers: {
         Authorization: `Bearer ${process.env.RUNPOD_API_KEY}`,
       },
@@ -52,7 +60,6 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // IN_QUEUE or IN_PROGRESS
     return NextResponse.json({ status: data.status });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
