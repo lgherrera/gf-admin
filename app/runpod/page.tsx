@@ -30,13 +30,17 @@ export default function RunPodPage() {
   const [seed, setSeed] = useState('');
   const [steps, setSteps] = useState('15');
   const [guidance, setGuidance] = useState('3.5');
+  const [strength, setStrength] = useState('0.85');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GeneratedImage | null>(null);
+  const [refImage, setRefImage] = useState<string | null>(null);
+  const [refPreview, setRefPreview] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Session persistence
   useEffect(() => {
@@ -59,6 +63,44 @@ export default function RunPodPage() {
     e.preventDefault();
     sessionStorage.setItem('admin-pwd', password);
     setAuthenticated(true);
+  };
+
+  const handleImageUpload = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be under 10MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setRefPreview(dataUrl);
+      // Extract base64 without the data:image/...;base64, prefix
+      const base64 = dataUrl.split(',')[1];
+      setRefImage(base64);
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const clearRefImage = () => {
+    setRefImage(null);
+    setRefPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const pollStatus = (jobId: string, currentPrompt: string, currentRatio: string) => {
@@ -115,19 +157,27 @@ export default function RunPodPage() {
     try {
       const parsedSeed = seed.trim() !== '' ? parseInt(seed, 10) : undefined;
 
+      const body: Record<string, unknown> = {
+        prompt,
+        aspectRatio: ratio,
+        steps: parseInt(steps, 10),
+        guidance: parseFloat(guidance),
+      };
+
+      if (parsedSeed !== undefined) body.seed = parsedSeed;
+
+      if (refImage) {
+        body.image_base64 = refImage;
+        body.strength = parseFloat(strength);
+      }
+
       const res = await fetch('/api/runpod', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-admin-password': password,
         },
-        body: JSON.stringify({
-          prompt,
-          aspectRatio: ratio,
-          seed: parsedSeed,
-          steps: parseInt(steps, 10),
-          guidance: parseFloat(guidance),
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -141,6 +191,14 @@ export default function RunPodPage() {
       setLoading(false);
       setStatus(null);
     }
+  };
+
+  const handleCancel = () => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setLoading(false);
+    setStatus(null);
+    setError('Cancelled');
   };
 
   const downloadImage = (format: 'png' | 'jpeg') => {
@@ -213,6 +271,108 @@ export default function RunPodPage() {
             />
             <div className="gen-char-count">{prompt.length} chars</div>
           </div>
+
+          {/* Reference Image */}
+          <div className="gen-field">
+            <label className="gen-label">
+              Reference Image <span className="gen-optional">(optional — enables img2img)</span>
+            </label>
+            {refPreview ? (
+              <div style={{
+                position: 'relative',
+                display: 'inline-block',
+                marginBottom: '8px',
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={refPreview}
+                  alt="Reference"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '200px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                  }}
+                />
+                <button
+                  onClick={clearRefImage}
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    background: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: '2px dashed var(--border)',
+                  borderRadius: '8px',
+                  padding: '24px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  fontSize: '14px',
+                  transition: 'border-color 0.2s',
+                }}
+              >
+                Drop an image here or click to upload
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file);
+              }}
+              style={{ display: 'none' }}
+            />
+          </div>
+
+          {/* Strength (only show when reference image is set) */}
+          {refImage && (
+            <div className="gen-field">
+              <label className="gen-label">
+                Strength <span className="gen-optional">({strength})</span>
+              </label>
+              <input
+                type="range"
+                min="0.1"
+                max="1.0"
+                step="0.05"
+                value={strength}
+                onChange={(e) => setStrength(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+              }}>
+                <span>Subtle changes</span>
+                <span>Heavy transformation</span>
+              </div>
+            </div>
+          )}
 
           {/* Aspect Ratio */}
           <div className="gen-field">
@@ -290,8 +450,12 @@ export default function RunPodPage() {
 
           {error && <div className="gen-error">{error}</div>}
 
-          <button className="gen-button" onClick={handleGenerate} disabled={loading}>
-            {loading ? statusLabel() : 'Generate Image'}
+          <button
+            className="gen-button"
+            onClick={loading ? handleCancel : handleGenerate}
+            disabled={false}
+          >
+            {loading ? `Cancel (${statusLabel()})` : refImage ? 'Generate (img2img)' : 'Generate Image'}
           </button>
         </div>
 
@@ -318,7 +482,7 @@ export default function RunPodPage() {
           {result && !loading && (
             <div className="gen-download-bar">
               <span className="gen-seed-badge">
-                Seed: {result.seed ?? 'auto'}
+                Seed: {result.seed ?? 'auto'} · {refImage ? 'img2img' : 'txt2img'}
               </span>
               <div className="gen-download-btns">
                 <button className="gen-dl-btn" onClick={() => downloadImage('png')}>

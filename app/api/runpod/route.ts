@@ -20,13 +20,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt, aspectRatio, seed, steps, guidance } = (await req.json()) as {
-      prompt: string;
-      aspectRatio?: string;
-      seed?: number;
-      steps?: number;
-      guidance?: number;
-    };
+    const { prompt, aspectRatio, seed, steps, guidance, image_base64, strength } =
+      (await req.json()) as {
+        prompt: string;
+        aspectRatio?: string;
+        seed?: number;
+        steps?: number;
+        guidance?: number;
+        image_base64?: string;
+        strength?: number;
+      };
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt required" }, { status: 400 });
@@ -48,6 +51,11 @@ export async function POST(req: NextRequest) {
 
     if (seed !== undefined) {
       input.seed = seed;
+    }
+
+    if (image_base64) {
+      input.image_base64 = image_base64;
+      input.strength = strength ?? 0.85;
     }
 
     const res = await fetch(RUNPOD_ENDPOINT, {
