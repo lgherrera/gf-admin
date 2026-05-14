@@ -1,4 +1,4 @@
-// app/components/Nav.tsx
+// app/components/nav.tsx
 
 'use client';
 
@@ -10,6 +10,7 @@ const links = [
   { href: '/messages', label: 'Messages' },
   { href: '/generations', label: 'Generations' },
   { href: '/generate', label: 'Generate' },
+  { href: '/runpod', label: 'RunPod' },
 ];
 
 export default function Nav() {
