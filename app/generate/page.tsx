@@ -13,11 +13,9 @@ const ASPECT_RATIOS = [
 
 const MODELS = [
   { label: 'Seedream 4.5', value: 'seedream', sub: 'ByteDance · fal' },
-  { label: 'Seedream 4.5', value: 'seedream-r', sub: 'ByteDance · Replicate' },
   { label: 'Seedream 5', value: 'seedream5', sub: 'ByteDance · Lite' },
   { label: 'Flux 1 Dev', value: 'flux1dev', sub: 'Black Forest Labs' },
-  { label: 'Flux 2 Dev', value: 'flux2dev', sub: 'Black Forest Labs' },
-  { label: 'Flux 2 Max', value: 'flux2max', sub: 'Black Forest Labs' },
+  { label: 'Flux 2 Pro', value: 'flux2pro', sub: 'Black Forest Labs' },
   { label: 'Wan 2.5', value: 'wan25', sub: 'Alibaba' },
   { label: 'Hunyuan v3', value: 'hunyuan3', sub: 'Tencent' },
 ];
@@ -50,9 +48,11 @@ export default function GeneratePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isV5 = model === 'seedream5';
-  const isReplicate = model === 'seedream-r';
-  const showSeed = !isV5 && !isReplicate;
-  const showRefs = model === 'seedream' || model === 'seedream-r';
+  const isFlux2Pro = model === 'flux2pro';
+  const showSeed = !isV5 && !isFlux2Pro;
+  const showRefs = model === 'seedream' || model === 'seedream5' || model === 'flux2pro';
+
+  const maxRefs = isV5 ? 10 : isFlux2Pro ? 9 : 5;
 
   // Session persistence
   useEffect(() => {
@@ -65,7 +65,6 @@ export default function GeneratePage() {
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    // Validate password by trying a simple check
     sessionStorage.setItem('admin-pwd', password);
     setAuthenticated(true);
   };
@@ -303,7 +302,7 @@ export default function GeneratePage() {
           {showRefs && (
             <div className="gen-field" style={{ width: '100%', maxWidth: 500 }}>
               <label className="gen-label">
-                Reference Images <span className="gen-optional">(optional)</span>
+                Reference Images <span className="gen-optional">(optional, up to {maxRefs})</span>
               </label>
               <div
                 className={`gen-dropzone ${dragOver ? 'gen-dropzone-active' : ''}`}
@@ -339,6 +338,7 @@ export default function GeneratePage() {
                       <button className="gen-ref-remove" onClick={() => removeImage(i)}>
                         ×
                       </button>
+                      <span className="gen-ref-label">Fig {i + 1}</span>
                     </div>
                   ))}
                 </div>
