@@ -11,6 +11,7 @@ const links = [
   { href: '/generations', label: 'Generations' },
   { href: '/generate', label: 'Generate' },
   { href: '/runpod', label: 'RunPod' },
+  { href: '/gallery', label: 'Gallery' },
 ];
 
 export default function Nav() {
