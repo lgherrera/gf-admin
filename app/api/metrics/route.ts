@@ -221,6 +221,72 @@ export async function GET(req: NextRequest) {
       count,
     }));
 
+    // Custom girlfriends created per day — last 14 days
+    const { data: customGfRaw } = await supabase
+      .from('girlfriends')
+      .select('created_at, user_id')
+      .eq('girlfriend_type', 'custom')
+      .gte('created_at', fourteenDaysAgo.toISOString())
+      .order('created_at', { ascending: true });
+
+    const customGfMap: Record<string, number> = {};
+    for (let i = 0; i < 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      const key = d.toISOString().split('T')[0];
+      customGfMap[key] = 0;
+    }
+
+    customGfRaw?.forEach((row) => {
+      const key = new Date(row.created_at).toISOString().split('T')[0];
+      if (customGfMap[key] !== undefined) {
+        customGfMap[key]++;
+      }
+    });
+
+    const customGfPerDay = Object.entries(customGfMap).map(([date, count]) => ({
+      date,
+      count,
+    }));
+
+    // Top custom girlfriend creators
+    const { data: allCustomGf } = await supabase
+      .from('girlfriends')
+      .select('user_id')
+      .eq('girlfriend_type', 'custom');
+
+    const creatorCountMap: Record<string, number> = {};
+    allCustomGf?.forEach((r) => {
+      if (r.user_id) {
+        creatorCountMap[r.user_id] = (creatorCountMap[r.user_id] || 0) + 1;
+      }
+    });
+
+    const topCreatorIds = Object.entries(creatorCountMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    // Fetch profiles for creators (reuse existing profiles where possible)
+    const missingCreatorIds = topCreatorIds.map(([id]) => id).filter((id) => !profileMap[id]);
+
+    if (missingCreatorIds.length > 0) {
+      const { data: creatorProfiles } = await supabase
+        .from('user_profiles')
+        .select('supabase_auth_id, name, msisdn')
+        .in('supabase_auth_id', missingCreatorIds);
+
+      creatorProfiles?.forEach((p) => {
+        profileMap[p.supabase_auth_id] = { name: p.name, msisdn: p.msisdn };
+      });
+    }
+
+    const topCustomGfCreators = topCreatorIds.map(([id, count]) => ({
+      userId: id,
+      name: profileMap[id]?.name || null,
+      msisdn: profileMap[id]?.msisdn || null,
+      count,
+    }));
+
     return NextResponse.json({
       totalUsers: totalUsers || 0,
       totalMessages: totalMessages || 0,
@@ -233,6 +299,8 @@ export async function GET(req: NextRequest) {
       topGirlfriends,
       topGenerators,
       topUsers,
+      customGfPerDay,
+      topCustomGfCreators,
     });
   } catch (error) {
     console.error('Metrics error:', error);

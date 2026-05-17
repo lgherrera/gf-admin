@@ -26,6 +26,8 @@ interface Metrics {
   topGirlfriends: { name: string; count: number }[];
   topGenerators: { userId: string; name: string | null; msisdn: string | null; count: number }[];
   topUsers: { userId: string; name: string | null; msisdn: string | null; count: number }[];
+  customGfPerDay: { date: string; count: number }[];
+  topCustomGfCreators: { userId: string; name: string | null; msisdn: string | null; count: number }[];
 }
 
 export default function Dashboard() {
@@ -403,6 +405,81 @@ export default function Dashboard() {
               </div>
             ))}
             {metrics.topUsers.length === 0 && (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                No data yet
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Custom Girlfriends Chart + Top Creators */}
+      <div className="charts-grid">
+        <div className="chart-card">
+          <h2 className="chart-title">Custom Girlfriends — Last 14 Days</h2>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={metrics.customGfPerDay}>
+                <defs>
+                  <linearGradient id="customGfGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#a855f7" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatDate}
+                  stroke="#555"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#555"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: '#e8e8e8',
+                  }}
+                  labelFormatter={formatDate}
+                  formatter={(value: unknown) => [Number(value).toLocaleString(), 'Custom GFs']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#a855f7"
+                  strokeWidth={2}
+                  fill="url(#customGfGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#a855f7', stroke: '#0a0a0a', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h2 className="chart-title">Top Creators</h2>
+          <div className="gf-list">
+            {metrics.topCustomGfCreators.map((user, i) => (
+              <div key={user.userId} className="gf-row">
+                <span className="gf-rank">{i + 1}</span>
+                <span className="gf-name">
+                  {user.msisdn || user.name || user.userId.slice(0, 8)}
+                </span>
+                <span className="gf-count">{user.count.toLocaleString()}</span>
+              </div>
+            ))}
+            {metrics.topCustomGfCreators.length === 0 && (
               <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                 No data yet
               </p>
