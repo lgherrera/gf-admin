@@ -5,8 +5,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Nav from '../components/nav';
 
-const contentRating = process.env.NEXT_PUBLIC_APP_SOURCE || 'sfw';
-
 interface GeneratedImage {
   id: string;
   girlfriend_id: string | null;
@@ -22,8 +20,11 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [contentRating, setContentRating] = useState<'sfw' | 'nsfw'>('sfw');
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     fetch(`/api/generated-images/community?contentRating=${contentRating}`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch images');
@@ -35,7 +36,7 @@ export default function GalleryPage() {
         setError('Could not load images.');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [contentRating]);
 
   // Lightbox controls
   const openLightbox = (index: number) => setSelectedIndex(index);
@@ -80,6 +81,22 @@ export default function GalleryPage() {
       <div className="gallery-page">
         <div className="gallery-header">
           <h1 className="gallery-title">Gallery</h1>
+
+          <div className="gallery-rating-toggle">
+            <button
+              className={`gallery-rating-btn ${contentRating === 'sfw' ? 'gallery-rating-active' : ''}`}
+              onClick={() => setContentRating('sfw')}
+            >
+              SFW
+            </button>
+            <button
+              className={`gallery-rating-btn ${contentRating === 'nsfw' ? 'gallery-rating-active gallery-rating-nsfw' : ''}`}
+              onClick={() => setContentRating('nsfw')}
+            >
+              NSFW
+            </button>
+          </div>
+
           {!loading && !error && images.length > 0 && (
             <span className="gallery-count">
               {images.length} {images.length === 1 ? 'image' : 'images'}
@@ -100,7 +117,7 @@ export default function GalleryPage() {
                 <polyline points="21 15 16 10 5 21"/>
               </svg>
             </div>
-            <p className="gallery-empty-text">No images in the gallery yet.</p>
+            <p className="gallery-empty-text">No {contentRating.toUpperCase()} images in the gallery yet.</p>
             <p className="gallery-empty-sub">Saved images from users will appear here.</p>
           </div>
         ) : (
