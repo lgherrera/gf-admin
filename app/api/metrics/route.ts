@@ -224,7 +224,7 @@ export async function GET(req: NextRequest) {
     // Custom girlfriends created per day — last 14 days
     const { data: customGfRaw } = await supabase
       .from('girlfriends')
-      .select('created_at, user_id')
+      .select('created_at, created_by')
       .eq('girlfriend_type', 'custom')
       .gte('created_at', fourteenDaysAgo.toISOString())
       .order('created_at', { ascending: true });
@@ -252,13 +252,13 @@ export async function GET(req: NextRequest) {
     // Top custom girlfriend creators
     const { data: allCustomGf } = await supabase
       .from('girlfriends')
-      .select('user_id')
+      .select('created_by')
       .eq('girlfriend_type', 'custom');
 
     const creatorCountMap: Record<string, number> = {};
     allCustomGf?.forEach((r) => {
-      if (r.user_id) {
-        creatorCountMap[r.user_id] = (creatorCountMap[r.user_id] || 0) + 1;
+      if (r.created_by) {
+        creatorCountMap[r.created_by] = (creatorCountMap[r.created_by] || 0) + 1;
       }
     });
 
