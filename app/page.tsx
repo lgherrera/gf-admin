@@ -14,6 +14,22 @@ import {
 } from 'recharts';
 import Nav from './components/nav';
 
+type Range = '7' | '14' | '30' | 'all';
+
+const RANGE_OPTIONS: { value: Range; label: string }[] = [
+  { value: '7', label: '7D' },
+  { value: '14', label: '14D' },
+  { value: '30', label: '30D' },
+  { value: 'all', label: 'All Time' },
+];
+
+function rangeLabel(range: Range): string {
+  if (range === '7') return 'Last 7 Days';
+  if (range === '14') return 'Last 14 Days';
+  if (range === '30') return 'Last 30 Days';
+  return 'All Time';
+}
+
 interface Metrics {
   totalUsers: number;
   totalMessages: number;
@@ -23,10 +39,10 @@ interface Metrics {
   messagesPerDay: { date: string; count: number }[];
   imagesPerDay: { date: string; count: number }[];
   usersPerDay: { date: string; count: number }[];
+  customGfPerDay: { date: string; count: number }[];
   topGirlfriends: { name: string; count: number }[];
   topGenerators: { userId: string; name: string | null; msisdn: string | null; count: number }[];
   topUsers: { userId: string; name: string | null; msisdn: string | null; count: number }[];
-  customGfPerDay: { date: string; count: number }[];
   topCustomGfCreators: { userId: string; name: string | null; msisdn: string | null; count: number }[];
 }
 
@@ -36,12 +52,13 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [range, setRange] = useState<Range>('14');
 
-  const fetchMetrics = useCallback(async (pwd: string) => {
+  const fetchMetrics = useCallback(async (pwd: string, r: Range = '14') => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/metrics', {
+      const res = await fetch(`/api/metrics?range=${r}`, {
         headers: { 'x-admin-password': pwd },
       });
       if (!res.ok) {
@@ -64,22 +81,27 @@ export default function Dashboard() {
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    fetchMetrics(password);
+    fetchMetrics(password, range);
+  };
+
+  const handleRangeChange = (r: Range) => {
+    setRange(r);
+    fetchMetrics(password, r);
   };
 
   // Auto-refresh every hour
   useEffect(() => {
     if (!authenticated) return;
-    const interval = setInterval(() => fetchMetrics(password), 60 * 60 * 1000);
+    const interval = setInterval(() => fetchMetrics(password, range), 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [authenticated, password, fetchMetrics]);
+  }, [authenticated, password, range, fetchMetrics]);
 
   // Check if password is in sessionStorage
   useEffect(() => {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
       setPassword(saved);
-      fetchMetrics(saved);
+      fetchMetrics(saved, '14');
     }
   }, [fetchMetrics]);
 
@@ -135,6 +157,8 @@ export default function Dashboard() {
     return d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
   };
 
+  const rl = rangeLabel(range);
+
   return (
     <>
       <Nav />
@@ -157,13 +181,27 @@ export default function Dashboard() {
             })}
           </p>
         </div>
-        <button
-          onClick={() => fetchMetrics(password)}
-          className="refresh-button"
-          disabled={loading}
-        >
-          {loading ? '↻' : '↻ Refresh'}
-        </button>
+        <div className="header-controls">
+          <div className="range-toggle">
+            {RANGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleRangeChange(opt.value)}
+                className={`range-button ${range === opt.value ? 'range-button-active' : ''}`}
+                disabled={loading}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => fetchMetrics(password, range)}
+            className="refresh-button"
+            disabled={loading}
+          >
+            {loading ? '↻' : '↻ Refresh'}
+          </button>
+        </div>
       </header>
 
       {/* Stat Cards */}
@@ -193,7 +231,7 @@ export default function Dashboard() {
       {/* Messages Chart + Top Characters */}
       <div className="charts-grid">
         <div className="chart-card">
-          <h2 className="chart-title">Messages — Last 14 Days</h2>
+          <h2 className="chart-title">Messages — {rl}</h2>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={metrics.messagesPerDay}>
@@ -266,7 +304,7 @@ export default function Dashboard() {
       {/* Generated Images Chart + Top Generators */}
       <div className="charts-grid">
         <div className="chart-card">
-          <h2 className="chart-title">Generated Images — Last 14 Days</h2>
+          <h2 className="chart-title">Generated Images — {rl}</h2>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={metrics.imagesPerDay}>
@@ -341,7 +379,7 @@ export default function Dashboard() {
       {/* Users Chart + Top Users */}
       <div className="charts-grid">
         <div className="chart-card">
-          <h2 className="chart-title">New Users — Last 14 Days</h2>
+          <h2 className="chart-title">New Users — {rl}</h2>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={metrics.usersPerDay}>
@@ -416,7 +454,7 @@ export default function Dashboard() {
       {/* Custom Girlfriends Chart + Top Creators */}
       <div className="charts-grid">
         <div className="chart-card">
-          <h2 className="chart-title">Custom Girlfriends — Last 14 Days</h2>
+          <h2 className="chart-title">Custom Girlfriends — {rl}</h2>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={metrics.customGfPerDay}>

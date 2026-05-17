@@ -151,6 +151,46 @@ body {
   font-family: var(--font-mono);
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.range-toggle {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.range-button {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.range-button:hover {
+  color: var(--text-primary);
+}
+
+.range-button-active {
+  color: var(--text-primary);
+  background: var(--border);
+}
+
+.range-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .refresh-button {
   padding: 8px 16px;
   background: var(--bg-card);
@@ -879,6 +919,16 @@ body {
     gap: 16px;
   }
 
+  .dashboard-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .header-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -908,5 +958,9 @@ body {
 
   .gen-model-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .range-toggle {
+    flex-wrap: wrap;
   }
 }

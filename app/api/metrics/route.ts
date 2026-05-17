@@ -12,17 +12,33 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Total users
+    // Parse range param: 7, 14, 30, or "all"
+    const rangeParam = req.nextUrl.searchParams.get('range') || '14';
+    const isAllTime = rangeParam === 'all';
+    const days = isAllTime ? null : parseInt(rangeParam) || 14;
+
+    // Compute cutoff date (null for all-time)
+    let cutoffDate: string | null = null;
+    if (days) {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      cutoffDate = d.toISOString();
+    }
+
+    // ── Stat cards (always all-time) ──
+
     const { count: totalUsers } = await supabase
       .from('user_profiles')
       .select('*', { count: 'exact', head: true });
 
-    // Total messages
     const { count: totalMessages } = await supabase
       .from('chat_messages')
       .select('*', { count: 'exact', head: true });
 
-    // Active today (distinct users who messaged today)
+    const { count: totalImages } = await supabase
+      .from('generated_images')
+      .select('*', { count: 'exact', head: true });
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -33,99 +49,164 @@ export async function GET(req: NextRequest) {
 
     const activeToday = new Set(activeData?.map((r) => r.user_id)).size;
 
-    // Custom girlfriends count
-    // TODO: adjust filter if column name differs (e.g. is_custom, created_by, etc.)
     const { count: customGirlfriends } = await supabase
       .from('girlfriends')
       .select('*', { count: 'exact', head: true })
       .eq('girlfriend_type', 'custom');
 
-    // Messages per day — last 14 days
-    const fourteenDaysAgo = new Date();
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-
-    const { data: messagesRaw } = await supabase
-      .from('chat_messages')
-      .select('created_at')
-      .gte('created_at', fourteenDaysAgo.toISOString())
-      .order('created_at', { ascending: true });
-
-    const dailyMap: Record<string, number> = {};
-    for (let i = 0; i < 14; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - (13 - i));
-      const key = d.toISOString().split('T')[0];
-      dailyMap[key] = 0;
+    // ── Helper: build daily map for chart data ──
+    function buildDailyMap(numDays: number): Record<string, number> {
+      const map: Record<string, number> = {};
+      for (let i = 0; i < numDays; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - (numDays - 1 - i));
+        map[d.toISOString().split('T')[0]] = 0;
+      }
+      return map;
     }
 
-    messagesRaw?.forEach((row) => {
-      const key = new Date(row.created_at).toISOString().split('T')[0];
-      if (dailyMap[key] !== undefined) {
-        dailyMap[key]++;
+    function buildDailyMapFromRange(earliest: string, latest: string): Record<string, number> {
+      const map: Record<string, number> = {};
+      const start = new Date(earliest);
+      const end = new Date(latest);
+      // Include today even if latest is in the past
+      const realEnd = new Date(Math.max(end.getTime(), Date.now()));
+      const d = new Date(start);
+      while (d <= realEnd) {
+        map[d.toISOString().split('T')[0]] = 0;
+        d.setDate(d.getDate() + 1);
       }
-    });
+      return map;
+    }
 
-    const messagesPerDay = Object.entries(dailyMap).map(([date, count]) => ({
-      date,
-      count,
-    }));
+    function fillMap(
+      map: Record<string, number>,
+      rows: { created_at: string }[] | null
+    ): { date: string; count: number }[] {
+      rows?.forEach((row) => {
+        const key = new Date(row.created_at).toISOString().split('T')[0];
+        if (map[key] !== undefined) {
+          map[key]++;
+        }
+      });
+      return Object.entries(map).map(([date, count]) => ({ date, count }));
+    }
 
-    // New users per day — last 14 days
-    const { data: usersRaw } = await supabase
+    // ── Messages per day ──
+    let messagesQuery = supabase
+      .from('chat_messages')
+      .select('created_at')
+      .order('created_at', { ascending: true });
+    if (cutoffDate) messagesQuery = messagesQuery.gte('created_at', cutoffDate);
+
+    const { data: messagesRaw } = await messagesQuery;
+
+    let messagesPerDay: { date: string; count: number }[];
+    if (isAllTime && messagesRaw && messagesRaw.length > 0) {
+      const map = buildDailyMapFromRange(
+        messagesRaw[0].created_at,
+        messagesRaw[messagesRaw.length - 1].created_at
+      );
+      messagesPerDay = fillMap(map, messagesRaw);
+    } else {
+      messagesPerDay = fillMap(buildDailyMap(days || 14), messagesRaw);
+    }
+
+    // ── New users per day ──
+    let usersQuery = supabase
       .from('user_profiles')
       .select('created_at')
-      .gte('created_at', fourteenDaysAgo.toISOString())
       .order('created_at', { ascending: true });
+    if (cutoffDate) usersQuery = usersQuery.gte('created_at', cutoffDate);
 
-    const usersMap: Record<string, number> = {};
-    for (let i = 0; i < 14; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - (13 - i));
-      const key = d.toISOString().split('T')[0];
-      usersMap[key] = 0;
+    const { data: usersRaw } = await usersQuery;
+
+    let usersPerDay: { date: string; count: number }[];
+    if (isAllTime && usersRaw && usersRaw.length > 0) {
+      const map = buildDailyMapFromRange(
+        usersRaw[0].created_at,
+        usersRaw[usersRaw.length - 1].created_at
+      );
+      usersPerDay = fillMap(map, usersRaw);
+    } else {
+      usersPerDay = fillMap(buildDailyMap(days || 14), usersRaw);
     }
 
-    usersRaw?.forEach((row) => {
-      const key = new Date(row.created_at).toISOString().split('T')[0];
-      if (usersMap[key] !== undefined) {
-        usersMap[key]++;
-      }
-    });
+    // ── Generated images per day ──
+    let imagesQuery = supabase
+      .from('generated_images')
+      .select('created_at')
+      .order('created_at', { ascending: true });
+    if (cutoffDate) imagesQuery = imagesQuery.gte('created_at', cutoffDate);
 
-    const usersPerDay = Object.entries(usersMap).map(([date, count]) => ({
-      date,
-      count,
-    }));
+    const { data: imagesRaw } = await imagesQuery;
 
-    // Top girlfriends by message count
-    const { data: gfMessages } = await supabase
-      .from('chat_messages')
-      .select('girlfriend_id');
+    let imagesPerDay: { date: string; count: number }[];
+    if (isAllTime && imagesRaw && imagesRaw.length > 0) {
+      const map = buildDailyMapFromRange(
+        imagesRaw[0].created_at,
+        imagesRaw[imagesRaw.length - 1].created_at
+      );
+      imagesPerDay = fillMap(map, imagesRaw);
+    } else {
+      imagesPerDay = fillMap(buildDailyMap(days || 14), imagesRaw);
+    }
+
+    // ── Custom GFs per day ──
+    let customGfQuery = supabase
+      .from('girlfriends')
+      .select('created_at')
+      .eq('girlfriend_type', 'custom')
+      .order('created_at', { ascending: true });
+    if (cutoffDate) customGfQuery = customGfQuery.gte('created_at', cutoffDate);
+
+    const { data: customGfRaw } = await customGfQuery;
+
+    let customGfPerDay: { date: string; count: number }[];
+    if (isAllTime && customGfRaw && customGfRaw.length > 0) {
+      const map = buildDailyMapFromRange(
+        customGfRaw[0].created_at,
+        customGfRaw[customGfRaw.length - 1].created_at
+      );
+      customGfPerDay = fillMap(map, customGfRaw);
+    } else {
+      customGfPerDay = fillMap(buildDailyMap(days || 14), customGfRaw);
+    }
+
+    // ── Top girlfriends by message count (scoped to range) ──
+    let gfMsgQuery = supabase.from('chat_messages').select('girlfriend_id');
+    if (cutoffDate) gfMsgQuery = gfMsgQuery.gte('created_at', cutoffDate);
+
+    const { data: gfMessages } = await gfMsgQuery;
 
     const gfCountMap: Record<string, number> = {};
     gfMessages?.forEach((r) => {
       gfCountMap[r.girlfriend_id] = (gfCountMap[r.girlfriend_id] || 0) + 1;
     });
 
-    const { data: girlfriends } = await supabase
-      .from('girlfriends')
-      .select('id, name')
-      .in('id', Object.keys(gfCountMap));
-
+    const gfIds = Object.keys(gfCountMap);
     const gfNameMap: Record<string, string> = {};
-    girlfriends?.forEach((g) => {
-      gfNameMap[g.id] = g.name;
-    });
+    if (gfIds.length > 0) {
+      const { data: girlfriends } = await supabase
+        .from('girlfriends')
+        .select('id, name')
+        .in('id', gfIds);
+
+      girlfriends?.forEach((g) => {
+        gfNameMap[g.id] = g.name;
+      });
+    }
 
     const topGirlfriends = Object.entries(gfCountMap)
       .map(([id, count]) => ({ name: gfNameMap[id] || id, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Top users by message count with phone
-    const { data: userMessages } = await supabase
-      .from('chat_messages')
-      .select('user_id');
+    // ── Top users by message count (scoped to range) ──
+    let userMsgQuery = supabase.from('chat_messages').select('user_id');
+    if (cutoffDate) userMsgQuery = userMsgQuery.gte('created_at', cutoffDate);
+
+    const { data: userMessages } = await userMsgQuery;
 
     const userCountMap: Record<string, number> = {};
     userMessages?.forEach((r) => {
@@ -136,15 +217,18 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
 
-    const { data: userProfiles } = await supabase
-      .from('user_profiles')
-      .select('supabase_auth_id, name, msisdn')
-      .in('supabase_auth_id', topUserIds.map(([id]) => id));
-
     const profileMap: Record<string, { name: string | null; msisdn: string | null }> = {};
-    userProfiles?.forEach((p) => {
-      profileMap[p.supabase_auth_id] = { name: p.name, msisdn: p.msisdn };
-    });
+
+    if (topUserIds.length > 0) {
+      const { data: userProfiles } = await supabase
+        .from('user_profiles')
+        .select('supabase_auth_id, name, msisdn')
+        .in('supabase_auth_id', topUserIds.map(([id]) => id));
+
+      userProfiles?.forEach((p) => {
+        profileMap[p.supabase_auth_id] = { name: p.name, msisdn: p.msisdn };
+      });
+    }
 
     const topUsers = topUserIds.map(([id, count]) => ({
       userId: id,
@@ -153,42 +237,11 @@ export async function GET(req: NextRequest) {
       count,
     }));
 
-    // Generated images per day — last 14 days
-    const { data: imagesRaw } = await supabase
-      .from('generated_images')
-      .select('created_at')
-      .gte('created_at', fourteenDaysAgo.toISOString())
-      .order('created_at', { ascending: true });
+    // ── Top generators by image count (scoped to range) ──
+    let genQuery = supabase.from('generated_images').select('user_id');
+    if (cutoffDate) genQuery = genQuery.gte('created_at', cutoffDate);
 
-    const imagesMap: Record<string, number> = {};
-    for (let i = 0; i < 14; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - (13 - i));
-      const key = d.toISOString().split('T')[0];
-      imagesMap[key] = 0;
-    }
-
-    imagesRaw?.forEach((row) => {
-      const key = new Date(row.created_at).toISOString().split('T')[0];
-      if (imagesMap[key] !== undefined) {
-        imagesMap[key]++;
-      }
-    });
-
-    const imagesPerDay = Object.entries(imagesMap).map(([date, count]) => ({
-      date,
-      count,
-    }));
-
-    // Total generated images
-    const { count: totalImages } = await supabase
-      .from('generated_images')
-      .select('*', { count: 'exact', head: true });
-
-    // Top generators by image count with phone
-    const { data: genImages } = await supabase
-      .from('generated_images')
-      .select('user_id');
+    const { data: genImages } = await genQuery;
 
     const genCountMap: Record<string, number> = {};
     genImages?.forEach((r) => {
@@ -199,10 +252,7 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
 
-    // Fetch profiles for generators (reuse existing profiles where possible)
-    const allGenIds = topGenIds.map(([id]) => id);
-    const missingGenIds = allGenIds.filter((id) => !profileMap[id]);
-
+    const missingGenIds = topGenIds.map(([id]) => id).filter((id) => !profileMap[id]);
     if (missingGenIds.length > 0) {
       const { data: genProfiles } = await supabase
         .from('user_profiles')
@@ -221,39 +271,14 @@ export async function GET(req: NextRequest) {
       count,
     }));
 
-    // Custom girlfriends created per day — last 14 days
-    const { data: customGfRaw } = await supabase
-      .from('girlfriends')
-      .select('created_at, created_by')
-      .eq('girlfriend_type', 'custom')
-      .gte('created_at', fourteenDaysAgo.toISOString())
-      .order('created_at', { ascending: true });
-
-    const customGfMap: Record<string, number> = {};
-    for (let i = 0; i < 14; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - (13 - i));
-      const key = d.toISOString().split('T')[0];
-      customGfMap[key] = 0;
-    }
-
-    customGfRaw?.forEach((row) => {
-      const key = new Date(row.created_at).toISOString().split('T')[0];
-      if (customGfMap[key] !== undefined) {
-        customGfMap[key]++;
-      }
-    });
-
-    const customGfPerDay = Object.entries(customGfMap).map(([date, count]) => ({
-      date,
-      count,
-    }));
-
-    // Top custom girlfriend creators
-    const { data: allCustomGf } = await supabase
+    // ── Top custom GF creators (scoped to range) ──
+    let creatorQuery = supabase
       .from('girlfriends')
       .select('created_by')
       .eq('girlfriend_type', 'custom');
+    if (cutoffDate) creatorQuery = creatorQuery.gte('created_at', cutoffDate);
+
+    const { data: allCustomGf } = await creatorQuery;
 
     const creatorCountMap: Record<string, number> = {};
     allCustomGf?.forEach((r) => {
@@ -266,9 +291,7 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
 
-    // Fetch profiles for creators (reuse existing profiles where possible)
     const missingCreatorIds = topCreatorIds.map(([id]) => id).filter((id) => !profileMap[id]);
-
     if (missingCreatorIds.length > 0) {
       const { data: creatorProfiles } = await supabase
         .from('user_profiles')
@@ -296,10 +319,10 @@ export async function GET(req: NextRequest) {
       messagesPerDay,
       imagesPerDay,
       usersPerDay,
+      customGfPerDay,
       topGirlfriends,
       topGenerators,
       topUsers,
-      customGfPerDay,
       topCustomGfCreators,
     });
   } catch (error) {
