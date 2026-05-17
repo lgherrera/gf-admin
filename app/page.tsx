@@ -19,7 +19,7 @@ interface Metrics {
   totalMessages: number;
   totalImages: number;
   activeToday: number;
-  avgStage: number;
+  customGirlfriends: number;
   messagesPerDay: { date: string; count: number }[];
   imagesPerDay: { date: string; count: number }[];
   usersPerDay: { date: string; count: number }[];
@@ -127,13 +127,6 @@ export default function Dashboard() {
     );
   }
 
-  const stageLabel = (stage: number) => {
-    if (stage <= 1) return 'Blind Date';
-    if (stage <= 2) return 'Saliendo';
-    if (stage <= 3) return 'Andando';
-    return 'Pololos';
-  };
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const formatDate = (label: any) => {
     const d = new Date(String(label) + 'T12:00:00');
@@ -190,9 +183,8 @@ export default function Dashboard() {
           <span className="stat-value">{metrics.activeToday.toLocaleString()}</span>
         </div>
         <div className="stat-card">
-          <span className="stat-label">Avg. Stage</span>
-          <span className="stat-value">{metrics.avgStage}</span>
-          <span className="stat-detail">~ {stageLabel(metrics.avgStage)}</span>
+          <span className="stat-label">Custom Girlfriends</span>
+          <span className="stat-value">{metrics.customGirlfriends.toLocaleString()}</span>
         </div>
       </div>
 

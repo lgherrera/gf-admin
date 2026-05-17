@@ -33,15 +33,12 @@ export async function GET(req: NextRequest) {
 
     const activeToday = new Set(activeData?.map((r) => r.user_id)).size;
 
-    // Average stage from user_progress
-    const { data: stageData } = await supabase
-      .from('user_progress')
-      .select('stage');
-
-    const avgStage =
-      stageData && stageData.length > 0
-        ? stageData.reduce((sum, r) => sum + (r.stage || 1), 0) / stageData.length
-        : 0;
+    // Custom girlfriends count
+    // TODO: adjust filter if column name differs (e.g. is_custom, created_by, etc.)
+    const { count: customGirlfriends } = await supabase
+      .from('girlfriends')
+      .select('*', { count: 'exact', head: true })
+      .eq('girlfriend_type', 'custom');
 
     // Messages per day — last 14 days
     const fourteenDaysAgo = new Date();
@@ -229,7 +226,7 @@ export async function GET(req: NextRequest) {
       totalMessages: totalMessages || 0,
       totalImages: totalImages || 0,
       activeToday,
-      avgStage: Math.round(avgStage * 10) / 10,
+      customGirlfriends: customGirlfriends || 0,
       messagesPerDay,
       imagesPerDay,
       usersPerDay,
