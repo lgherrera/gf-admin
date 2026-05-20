@@ -21,6 +21,7 @@ export default function AtlasCloudPage() {
   const [prompt, setPrompt] = useState('');
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [referencePreview, setReferencePreview] = useState<string | null>(null);
+  const [duration, setDuration] = useState(5);
 
   // Generation state
   const [loading, setLoading] = useState(false);
@@ -163,6 +164,7 @@ export default function AtlasCloudPage() {
           model,
           prompt,
           image_url: imageUrl,
+          ...(tab === 'videos' && { duration }),
         }),
       });
 
@@ -320,6 +322,31 @@ export default function AtlasCloudPage() {
               rows={5}
             />
           </div>
+
+          {/* Duration — Videos only */}
+          {tab === 'videos' && (
+            <div className="ac-field">
+              <label className="ac-label">
+                Duration
+                <span className="ac-label-hint"> ({duration}s)</span>
+              </label>
+              <div className="ac-duration-row">
+                <input
+                  type="range"
+                  min={4}
+                  max={15}
+                  step={1}
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  className="ac-duration-slider"
+                />
+                <div className="ac-duration-labels">
+                  <span>4s</span>
+                  <span>15s</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Generate button */}
           <button

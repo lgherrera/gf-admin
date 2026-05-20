@@ -14,11 +14,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { type, model, prompt, image_url } = body as {
+    const { type, model, prompt, image_url, duration } = body as {
       type: "image" | "video";
       model: string;
       prompt: string;
       image_url?: string;
+      duration?: number;
     };
 
     const endpoint =
@@ -34,6 +35,10 @@ export async function POST(req: NextRequest) {
 
     if (image_url) {
       payload.image_url = image_url;
+    }
+
+    if (type === "video" && duration) {
+      payload.duration = duration;
     }
 
     const response = await fetch(endpoint, {
