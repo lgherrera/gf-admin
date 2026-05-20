@@ -12,6 +12,7 @@ const links = [
   { href: '/generate', label: 'Generate' },
   { href: '/runpod', label: 'RunPod' },
   { href: '/gallery', label: 'Gallery' },
+  { href: '/atlas-cloud', label: 'Atlas Cloud' },
 ];
 
 export default function Nav() {
