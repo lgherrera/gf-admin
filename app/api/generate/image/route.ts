@@ -32,13 +32,15 @@ const MODEL_ENDPOINTS: Record<string, string> = {
   flux1dev: "fal-ai/flux/dev",
   flux2pro: "fal-ai/flux-2-pro",
   nanobananapro: "fal-ai/nano-banana-pro",
-  gptimage2: "fal-ai/openai/gpt-image-2",
+  gptimage2: "openai/gpt-image-2",
 };
 
 const EDIT_ENDPOINTS: Record<string, string> = {
   seedream: "fal-ai/bytedance/seedream/v4.5/edit",
   seedream5: "fal-ai/bytedance/seedream/v5/lite/edit",
   flux2pro: "fal-ai/flux-2-pro/edit",
+  nanobananapro: "fal-ai/nano-banana-pro/edit",
+  gptimage2: "openai/gpt-image-2/edit",
 };
 
 /* ── Models that do NOT support seed ───────────────────────────────── */
