@@ -1,53 +1,53 @@
 // app/generate/page.tsx
-
+ 
 'use client';
-
+ 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Nav from '../components/nav';
-
+ 
 const ASPECT_RATIOS = [
   { label: '16:9', value: '16:9' },
   { label: '9:16', value: '9:16' },
   { label: '2:3', value: '2:3' },
 ];
-
+ 
 const RESOLUTIONS = [
   { label: '1K', value: '1K' },
   { label: '2K', value: '2K' },
   { label: '4K', value: '4K' },
 ];
-
+ 
 const COUNTS = [
   { label: '1', value: 1 },
   { label: '2', value: 2 },
   { label: '3', value: 3 },
   { label: '4', value: 4 },
 ];
-
+ 
 const MODELS = [
+  { label: 'Nano Banana Pro', value: 'nanobananapro', sub: 'fal.ai · 4K' },
   { label: 'Seedream 4.5', value: 'seedream', sub: 'ByteDance · fal' },
   { label: 'Seedream 5', value: 'seedream5', sub: 'ByteDance · Lite' },
   { label: 'Flux 1 Dev', value: 'flux1dev', sub: 'Black Forest Labs' },
   { label: 'Flux 2 Pro', value: 'flux2pro', sub: 'Black Forest Labs' },
-  { label: 'Nano Banana Pro', value: 'nanobananapro', sub: 'fal.ai · 4K' },
   { label: 'GPT Image 2', value: 'gptimage2', sub: 'OpenAI · fal' },
 ];
-
+ 
 const RATIO_W: Record<string, number> = { '16:9': 16, '9:16': 9, '2:3': 2 };
 const RATIO_H: Record<string, number> = { '16:9': 9, '9:16': 16, '2:3': 3 };
-
+ 
 const EYE_COLORS = ['blue', 'brown', 'green', 'cyan', 'amber', 'violet'];
-
+ 
 // Models that do NOT support seed
 const NO_SEED_MODELS = new Set(['seedream5', 'flux2pro', 'gptimage2']);
-
+ 
 interface GeneratedImage {
   url: string;
   prompt: string;
   ratio: string;
   seed: number | null;
 }
-
+ 
 export default function GeneratePage() {
   const [password, setPassword] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
@@ -55,7 +55,7 @@ export default function GeneratePage() {
   const [ratio, setRatio] = useState('9:16');
   const [resolution, setResolution] = useState('1K');
   const [count, setCount] = useState(1);
-  const [model, setModel] = useState('seedream');
+  const [model, setModel] = useState('nanobananapro');
   const [seed, setSeed] = useState('');
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
   const [referencePreviews, setReferencePreviews] = useState<string[]>([]);
@@ -64,14 +64,14 @@ export default function GeneratePage() {
   const [results, setResults] = useState<GeneratedImage[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+ 
   const isV5 = model === 'seedream5';
   const isFlux2Pro = model === 'flux2pro';
   const showSeed = !NO_SEED_MODELS.has(model);
   const showRefs = model === 'seedream' || model === 'seedream5' || model === 'flux2pro' || model === 'nanobananapro' || model === 'gptimage2';
-
+ 
   const maxRefs = isV5 ? 10 : isFlux2Pro ? 9 : 5;
-
+ 
   // Session persistence
   useEffect(() => {
     const saved = sessionStorage.getItem('admin-pwd');
@@ -80,13 +80,13 @@ export default function GeneratePage() {
       setAuthenticated(true);
     }
   }, []);
-
+ 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
     sessionStorage.setItem('admin-pwd', password);
     setAuthenticated(true);
   };
-
+ 
   const handleFiles = useCallback((files: FileList | null) => {
     if (!files) return;
     const newFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
@@ -98,12 +98,12 @@ export default function GeneratePage() {
       reader.readAsDataURL(file);
     });
   }, []);
-
+ 
   const removeImage = (index: number) => {
     setReferenceImages((prev) => prev.filter((_, i) => i !== index));
     setReferencePreviews((prev) => prev.filter((_, i) => i !== index));
   };
-
+ 
   const compressImage = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
       const img = new Image();
@@ -129,7 +129,7 @@ export default function GeneratePage() {
       img.onerror = reject;
       img.src = url;
     });
-
+ 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       setError('Enter a prompt before generating.');
@@ -147,7 +147,7 @@ export default function GeneratePage() {
           /\b(cyan|blue|brown|green|amber|violet)\s+eyes\b/gi,
           `${randomEyeColor} eyes`
         ) || `${prompt}, ${randomEyeColor} eyes`;
-
+ 
       const res = await fetch('/api/generate/image', {
         method: 'POST',
         headers: {
@@ -164,13 +164,13 @@ export default function GeneratePage() {
           model,
         }),
       });
-
+ 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
-
+ 
       const urls: string[] = data.urls ?? (data.url ? [data.url] : []);
       if (urls.length === 0) throw new Error('No image URLs received');
-
+ 
       setResults(
         urls.map((url) => ({
           url,
@@ -185,7 +185,7 @@ export default function GeneratePage() {
       setLoading(false);
     }
   };
-
+ 
   const downloadImage = async (imageUrl: string, format: 'jpeg' | 'png') => {
     try {
       const res = await fetch(imageUrl);
@@ -200,7 +200,7 @@ export default function GeneratePage() {
       window.open(imageUrl, '_blank');
     }
   };
-
+ 
   if (!authenticated) {
     return (
       <div className="login-container">
@@ -227,9 +227,9 @@ export default function GeneratePage() {
       </div>
     );
   }
-
+ 
   const previewAspect = `${RATIO_W[ratio]} / ${RATIO_H[ratio]}`;
-
+ 
   return (
     <>
       <Nav />
@@ -237,7 +237,7 @@ export default function GeneratePage() {
         {/* Left: Controls */}
         <div className="gen-controls">
           <h1 className="gen-title">Image Generation</h1>
-
+ 
           {/* Model */}
           <div className="gen-field">
             <label className="gen-label">Model</label>
@@ -254,7 +254,7 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
-
+ 
           {/* Prompt */}
           <div className="gen-field">
             <label className="gen-label">Prompt</label>
@@ -267,7 +267,7 @@ export default function GeneratePage() {
             />
             <div className="gen-char-count">{prompt.length} chars</div>
           </div>
-
+ 
           {/* Aspect Ratio */}
           <div className="gen-field">
             <label className="gen-label">Aspect Ratio</label>
@@ -283,7 +283,7 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
-
+ 
           {/* Resolution */}
           <div className="gen-field">
             <label className="gen-label">Resolution</label>
@@ -299,7 +299,7 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
-
+ 
           {/* Image Count */}
           <div className="gen-field">
             <label className="gen-label">Images</label>
@@ -315,7 +315,7 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
-
+ 
           {/* Seed */}
           {showSeed && (
             <div className="gen-field">
@@ -343,14 +343,14 @@ export default function GeneratePage() {
               </div>
             </div>
           )}
-
+ 
           {error && <div className="gen-error">{error}</div>}
-
+ 
           <button className="gen-button" onClick={handleGenerate} disabled={loading}>
             {loading ? 'Generating...' : `Generate ${count > 1 ? `${count} Images` : 'Image'}`}
           </button>
         </div>
-
+ 
         {/* Right: Preview */}
         <div className="gen-preview-panel">
           {/* Reference Images — above preview */}
@@ -400,7 +400,7 @@ export default function GeneratePage() {
               )}
             </div>
           )}
-
+ 
           {/* Single image preview */}
           {results.length <= 1 && (
             <>
@@ -421,7 +421,7 @@ export default function GeneratePage() {
                   </div>
                 ) : null}
               </div>
-
+ 
               {results.length === 1 && !loading && (
                 <div className="gen-download-bar">
                   <span className="gen-seed-badge">
@@ -439,7 +439,7 @@ export default function GeneratePage() {
               )}
             </>
           )}
-
+ 
           {/* Multi-image grid */}
           {results.length > 1 && !loading && (
             <div className="gen-results-grid">
@@ -466,7 +466,7 @@ export default function GeneratePage() {
               ))}
             </div>
           )}
-
+ 
           {/* Loading state for multi */}
           {results.length === 0 && loading && count > 1 && (
             <div className="gen-preview-frame" style={{ aspectRatio: previewAspect }}>

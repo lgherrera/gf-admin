@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "FAL_KEY not configured" }, { status: 500 });
     }
 
-    const selectedModel = model ?? "seedream";
+    const selectedModel = model ?? "nanobananapro";
     const isFlux1Dev = selectedModel === "flux1dev";
     const isFlux2Pro = selectedModel === "flux2pro";
     const isSeedream = selectedModel === "seedream" || selectedModel === "seedream5";
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     const supportsRefs = isSeedream || isFlux2Pro || isNanoBanana || selectedModel === "gptimage2";
 
-    const endpoint = MODEL_ENDPOINTS[selectedModel] ?? MODEL_ENDPOINTS.seedream;
+    const endpoint = MODEL_ENDPOINTS[selectedModel] ?? MODEL_ENDPOINTS.nanobananapro;
 
     /* ── Resolve image size from aspect ratio + resolution ──────── */
     const res = resolution ?? "1K";
