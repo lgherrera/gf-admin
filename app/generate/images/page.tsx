@@ -1,9 +1,9 @@
-// app/generate/page.tsx
+// app/generate/images/page.tsx
 
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import Nav from '../components/nav';
+import Nav from '../../components/nav';
 
 const ASPECT_RATIOS = [
   { label: '16:9', value: '16:9' },

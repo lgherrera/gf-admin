@@ -9,7 +9,7 @@ const links = [
   { href: '/', label: 'Dashboard' },
   { href: '/messages', label: 'Messages' },
   { href: '/generations', label: 'Generations' },
-  { href: '/generate', label: 'Images' },
+  { href: '/generate/images', label: 'Images' },
   { href: '/generate/videos', label: 'Videos' },
   { href: '/runpod', label: 'RunPod' },
   { href: '/gallery', label: 'Gallery' },
