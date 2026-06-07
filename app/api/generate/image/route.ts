@@ -6,25 +6,33 @@ import { fal } from "@fal-ai/client";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-const RATIO_TO_SIZE_V4: Record<string, { width: number; height: number } | string> = {
-  "16:9": "landscape_16_9",
-  "9:16": "portrait_16_9",
-  "2:3": { width: 960, height: 1440 },
+/* ── Aspect-ratio × Resolution → pixel dimensions ─────────────────── */
+const SIZE_MAP: Record<string, Record<string, { width: number; height: number }>> = {
+  "16:9": {
+    "1K": { width: 1280, height: 720 },
+    "2K": { width: 1920, height: 1080 },
+    "4K": { width: 3840, height: 2160 },
+  },
+  "9:16": {
+    "1K": { width: 720, height: 1280 },
+    "2K": { width: 1080, height: 1920 },
+    "4K": { width: 2160, height: 3840 },
+  },
+  "2:3": {
+    "1K": { width: 832, height: 1248 },
+    "2K": { width: 1200, height: 1800 },
+    "4K": { width: 2400, height: 3600 },
+  },
 };
 
-const RATIO_TO_SIZE_V5: Record<string, string> = {
-  "16:9": "landscape_16_9",
-  "9:16": "portrait_16_9",
-  "2:3": "portrait_4_3",
-};
-
+/* ── Model endpoints ───────────────────────────────────────────────── */
 const MODEL_ENDPOINTS: Record<string, string> = {
   seedream: "fal-ai/bytedance/seedream/v4.5/text-to-image",
   seedream5: "fal-ai/bytedance/seedream/v5/lite/text-to-image",
   flux1dev: "fal-ai/flux/dev",
   flux2pro: "fal-ai/flux-2-pro",
-  wan25: "fal-ai/wan-25-preview/text-to-image",
-  hunyuan3: "fal-ai/hunyuan-image/v3/text-to-image",
+  nanobananapro: "fal-ai/nano-banana-pro",
+  gptimage2: "fal-ai/openai/gpt-image-2",
 };
 
 const EDIT_ENDPOINTS: Record<string, string> = {
@@ -33,6 +41,9 @@ const EDIT_ENDPOINTS: Record<string, string> = {
   flux2pro: "fal-ai/flux-2-pro/edit",
 };
 
+/* ── Models that do NOT support seed ───────────────────────────────── */
+const NO_SEED_MODELS = new Set(["seedream5", "flux2pro", "gptimage2"]);
+
 export async function POST(req: NextRequest) {
   try {
     const password = req.headers.get("x-admin-password");
@@ -40,13 +51,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt, aspectRatio, referenceImages, seed, model } = (await req.json()) as {
-      prompt: string;
-      aspectRatio: string;
-      referenceImages?: string[];
-      seed?: number;
-      model?: string;
-    };
+    const { prompt, aspectRatio, resolution, count, referenceImages, seed, model } =
+      (await req.json()) as {
+        prompt: string;
+        aspectRatio: string;
+        resolution?: string;
+        count?: number;
+        referenceImages?: string[];
+        seed?: number;
+        model?: string;
+      };
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt required" }, { status: 400 });
@@ -59,23 +73,25 @@ export async function POST(req: NextRequest) {
     const selectedModel = model ?? "seedream";
     const isFlux1Dev = selectedModel === "flux1dev";
     const isFlux2Pro = selectedModel === "flux2pro";
-    const isFlux = isFlux1Dev || isFlux2Pro;
-    const isV5 = selectedModel === "seedream5";
-    const isSeedream = selectedModel === "seedream" || isV5;
-    const isWan = selectedModel === "wan25";
-    const isHunyuan = selectedModel === "hunyuan3";
+    const isSeedream = selectedModel === "seedream" || selectedModel === "seedream5";
 
     const supportsRefs = isSeedream || isFlux2Pro;
 
     const endpoint = MODEL_ENDPOINTS[selectedModel] ?? MODEL_ENDPOINTS.seedream;
-    const imageSize = isV5 || isFlux2Pro
-      ? RATIO_TO_SIZE_V5[aspectRatio] ?? "portrait_16_9"
-      : RATIO_TO_SIZE_V4[aspectRatio] ?? "portrait_16_9";
-    const resolvedSeed = isV5 || isFlux2Pro
+
+    /* ── Resolve image size from aspect ratio + resolution ──────── */
+    const res = resolution ?? "1K";
+    const imageSize = SIZE_MAP[aspectRatio]?.[res] ?? SIZE_MAP["9:16"]["1K"];
+
+    /* ── Seed: skip for models that don't support it ────────────── */
+    const resolvedSeed = NO_SEED_MODELS.has(selectedModel)
       ? undefined
       : (seed ?? Math.floor(Math.random() * 2147483647));
 
-    // Upload base64 reference images to fal storage
+    /* ── Image count (1–4) ──────────────────────────────────────── */
+    const numImages = Math.min(Math.max(count ?? 1, 1), 4);
+
+    /* ── Upload base64 reference images to fal storage ──────────── */
     const referenceImageUrls: string[] = [];
     if (supportsRefs && referenceImages?.length) {
       for (const b64 of referenceImages) {
@@ -86,20 +102,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Use /edit endpoint when reference images are provided
+    /* ── Use /edit endpoint when reference images are provided ───── */
     const useEditEndpoint = referenceImageUrls.length > 0 && supportsRefs;
     const finalEndpoint = useEditEndpoint
       ? EDIT_ENDPOINTS[selectedModel] ?? endpoint
       : endpoint;
 
+    /* ── Build input payload ─────────────────────────────────────── */
     const input: Record<string, unknown> = {
       prompt,
       image_size: imageSize,
+      num_images: numImages,
       enable_safety_checker: false,
       ...(resolvedSeed !== undefined && { seed: resolvedSeed }),
       ...(isFlux1Dev && { guidance_scale: 3.5 }),
       ...(isFlux2Pro && { safety_tolerance: "5" }),
-      ...(isHunyuan && { guidance_scale: 7.5, enable_prompt_expansion: false }),
     };
 
     if (useEditEndpoint && referenceImageUrls.length > 0) {
@@ -109,16 +126,21 @@ export async function POST(req: NextRequest) {
     const result = await fal.subscribe(finalEndpoint, { input });
 
     const images = (result.data as { images?: { url: string }[] })?.images;
-    const imageUrl = images?.[0]?.url;
 
-    if (!imageUrl) {
+    if (!images?.length) {
       return NextResponse.json(
         { error: `Unexpected response: ${JSON.stringify(result.data).slice(0, 300)}` },
         { status: 502 }
       );
     }
 
-    return NextResponse.json({ url: imageUrl, seed: resolvedSeed ?? null });
+    const urls = images.map((img) => img.url);
+
+    return NextResponse.json({
+      urls,
+      url: urls[0],          // backwards-compatible single URL
+      seed: resolvedSeed ?? null,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.error("Generate image error:", msg);

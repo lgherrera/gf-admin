@@ -579,7 +579,7 @@ body {
 
 .gen-model-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 
@@ -785,6 +785,17 @@ body {
   justify-content: center;
 }
 
+.gen-ref-label {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 .gen-error {
   font-size: 13px;
   color: var(--accent);
@@ -905,6 +916,40 @@ body {
 .gen-dl-btn:hover {
   border-color: var(--accent);
   color: var(--text-primary);
+}
+
+/* Multi-image results grid */
+
+.gen-results-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 700px;
+}
+
+.gen-results-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gen-results-item .gen-preview-frame {
+  width: 100%;
+  max-width: unset;
+  max-height: unset;
+  min-height: unset;
+}
+
+.gen-results-item .gen-download-bar {
+  max-width: unset;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+}
+
+.gen-results-item .gen-dl-btn {
+  padding: 3px 8px;
+  font-size: 0.7rem;
 }
 
 /* ── Gallery Page ── */
@@ -1593,6 +1638,10 @@ body {
   .gen-page {
     grid-template-columns: 1fr;
     padding: 24px 20px;
+  }
+
+  .gen-results-grid {
+    grid-template-columns: 1fr;
   }
 
   .gallery-grid {

@@ -11,19 +11,35 @@ const ASPECT_RATIOS = [
   { label: '2:3', value: '2:3' },
 ];
 
+const RESOLUTIONS = [
+  { label: '1K', value: '1K' },
+  { label: '2K', value: '2K' },
+  { label: '4K', value: '4K' },
+];
+
+const COUNTS = [
+  { label: '1', value: 1 },
+  { label: '2', value: 2 },
+  { label: '3', value: 3 },
+  { label: '4', value: 4 },
+];
+
 const MODELS = [
   { label: 'Seedream 4.5', value: 'seedream', sub: 'ByteDance · fal' },
   { label: 'Seedream 5', value: 'seedream5', sub: 'ByteDance · Lite' },
   { label: 'Flux 1 Dev', value: 'flux1dev', sub: 'Black Forest Labs' },
   { label: 'Flux 2 Pro', value: 'flux2pro', sub: 'Black Forest Labs' },
-  { label: 'Wan 2.5', value: 'wan25', sub: 'Alibaba' },
-  { label: 'Hunyuan v3', value: 'hunyuan3', sub: 'Tencent' },
+  { label: 'Nano Banana Pro', value: 'nanobananapro', sub: 'fal.ai · 4K' },
+  { label: 'GPT Image 2', value: 'gptimage2', sub: 'OpenAI · fal' },
 ];
 
 const RATIO_W: Record<string, number> = { '16:9': 16, '9:16': 9, '2:3': 2 };
 const RATIO_H: Record<string, number> = { '16:9': 9, '9:16': 16, '2:3': 3 };
 
 const EYE_COLORS = ['blue', 'brown', 'green', 'cyan', 'amber', 'violet'];
+
+// Models that do NOT support seed
+const NO_SEED_MODELS = new Set(['seedream5', 'flux2pro', 'gptimage2']);
 
 interface GeneratedImage {
   url: string;
@@ -37,19 +53,21 @@ export default function GeneratePage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [ratio, setRatio] = useState('9:16');
+  const [resolution, setResolution] = useState('1K');
+  const [count, setCount] = useState(1);
   const [model, setModel] = useState('seedream');
   const [seed, setSeed] = useState('');
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
   const [referencePreviews, setReferencePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<GeneratedImage | null>(null);
+  const [results, setResults] = useState<GeneratedImage[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isV5 = model === 'seedream5';
   const isFlux2Pro = model === 'flux2pro';
-  const showSeed = !isV5 && !isFlux2Pro;
+  const showSeed = !NO_SEED_MODELS.has(model);
   const showRefs = model === 'seedream' || model === 'seedream5' || model === 'flux2pro';
 
   const maxRefs = isV5 ? 10 : isFlux2Pro ? 9 : 5;
@@ -119,7 +137,7 @@ export default function GeneratePage() {
     }
     setLoading(true);
     setError(null);
-    setResult(null);
+    setResults([]);
     try {
       const base64Images = await Promise.all(referenceImages.map(compressImage));
       const parsedSeed = seed.trim() !== '' ? parseInt(seed, 10) : undefined;
@@ -139,6 +157,8 @@ export default function GeneratePage() {
         body: JSON.stringify({
           prompt: enrichedPrompt,
           aspectRatio: ratio,
+          resolution,
+          count,
           referenceImages: base64Images,
           seed: parsedSeed,
           model,
@@ -147,14 +167,18 @@ export default function GeneratePage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
-      if (!data.url) throw new Error('No image URL received');
 
-      setResult({
-        url: data.url,
-        prompt: enrichedPrompt,
-        ratio,
-        seed: data.seed ?? null,
-      });
+      const urls: string[] = data.urls ?? (data.url ? [data.url] : []);
+      if (urls.length === 0) throw new Error('No image URLs received');
+
+      setResults(
+        urls.map((url) => ({
+          url,
+          prompt: enrichedPrompt,
+          ratio,
+          seed: data.seed ?? null,
+        }))
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -162,10 +186,9 @@ export default function GeneratePage() {
     }
   };
 
-  const downloadImage = async (format: 'jpeg' | 'png') => {
-    if (!result) return;
+  const downloadImage = async (imageUrl: string, format: 'jpeg' | 'png') => {
     try {
-      const res = await fetch(result.url);
+      const res = await fetch(imageUrl);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -174,7 +197,7 @@ export default function GeneratePage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      window.open(result.url, '_blank');
+      window.open(imageUrl, '_blank');
     }
   };
 
@@ -261,6 +284,38 @@ export default function GeneratePage() {
             </div>
           </div>
 
+          {/* Resolution */}
+          <div className="gen-field">
+            <label className="gen-label">Resolution</label>
+            <div className="gen-ratio-grid">
+              {RESOLUTIONS.map((r) => (
+                <button
+                  key={r.value}
+                  className={`gen-ratio-btn ${resolution === r.value ? 'gen-ratio-active' : ''}`}
+                  onClick={() => setResolution(r.value)}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Image Count */}
+          <div className="gen-field">
+            <label className="gen-label">Images</label>
+            <div className="gen-ratio-grid">
+              {COUNTS.map((c) => (
+                <button
+                  key={c.value}
+                  className={`gen-ratio-btn ${count === c.value ? 'gen-ratio-active' : ''}`}
+                  onClick={() => setCount(c.value)}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Seed */}
           {showSeed && (
             <div className="gen-field">
@@ -277,12 +332,12 @@ export default function GeneratePage() {
                   min={0}
                   max={2147483647}
                 />
-                {result && result.seed !== null && (
+                {results.length > 0 && results[0].seed !== null && (
                   <button
                     className="gen-seed-reuse"
-                    onClick={() => setSeed(String(result.seed))}
+                    onClick={() => setSeed(String(results[0].seed))}
                   >
-                    ↺ Reuse {result.seed}
+                    ↺ Reuse {results[0].seed}
                   </button>
                 )}
               </div>
@@ -292,7 +347,7 @@ export default function GeneratePage() {
           {error && <div className="gen-error">{error}</div>}
 
           <button className="gen-button" onClick={handleGenerate} disabled={loading}>
-            {loading ? 'Generating...' : 'Generate Image'}
+            {loading ? 'Generating...' : `Generate ${count > 1 ? `${count} Images` : 'Image'}`}
           </button>
         </div>
 
@@ -346,36 +401,78 @@ export default function GeneratePage() {
             </div>
           )}
 
-          <div className="gen-preview-frame" style={{ aspectRatio: previewAspect }}>
-            {loading && (
+          {/* Single image preview */}
+          {results.length <= 1 && (
+            <>
+              <div className="gen-preview-frame" style={{ aspectRatio: previewAspect }}>
+                {loading && (
+                  <div className="gen-loading">
+                    <div className="loading-spinner" />
+                    <p>Creating your image...</p>
+                  </div>
+                )}
+                {results.length === 1 && !loading ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={results[0].url} alt={results[0].prompt} className="gen-result-img" />
+                ) : !loading ? (
+                  <div className="gen-empty">
+                    <div className="gen-empty-icon">✦</div>
+                    <p>Your image will appear here</p>
+                  </div>
+                ) : null}
+              </div>
+
+              {results.length === 1 && !loading && (
+                <div className="gen-download-bar">
+                  <span className="gen-seed-badge">
+                    Seed: {results[0].seed ?? 'auto'}
+                  </span>
+                  <div className="gen-download-btns">
+                    <button className="gen-dl-btn" onClick={() => downloadImage(results[0].url, 'jpeg')}>
+                      JPEG
+                    </button>
+                    <button className="gen-dl-btn" onClick={() => downloadImage(results[0].url, 'png')}>
+                      PNG
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Multi-image grid */}
+          {results.length > 1 && !loading && (
+            <div className="gen-results-grid">
+              {results.map((img, i) => (
+                <div key={i} className="gen-results-item">
+                  <div className="gen-preview-frame" style={{ aspectRatio: previewAspect }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.url} alt={img.prompt} className="gen-result-img" />
+                  </div>
+                  <div className="gen-download-bar">
+                    <span className="gen-seed-badge">
+                      {i + 1}/{results.length}
+                    </span>
+                    <div className="gen-download-btns">
+                      <button className="gen-dl-btn" onClick={() => downloadImage(img.url, 'jpeg')}>
+                        JPEG
+                      </button>
+                      <button className="gen-dl-btn" onClick={() => downloadImage(img.url, 'png')}>
+                        PNG
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Loading state for multi */}
+          {results.length === 0 && loading && count > 1 && (
+            <div className="gen-preview-frame" style={{ aspectRatio: previewAspect }}>
               <div className="gen-loading">
                 <div className="loading-spinner" />
-                <p>Creating your image...</p>
-              </div>
-            )}
-            {result && !loading ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={result.url} alt={result.prompt} className="gen-result-img" />
-            ) : !loading ? (
-              <div className="gen-empty">
-                <div className="gen-empty-icon">✦</div>
-                <p>Your image will appear here</p>
-              </div>
-            ) : null}
-          </div>
-
-          {result && !loading && (
-            <div className="gen-download-bar">
-              <span className="gen-seed-badge">
-                Seed: {result.seed ?? 'auto'}
-              </span>
-              <div className="gen-download-btns">
-                <button className="gen-dl-btn" onClick={() => downloadImage('jpeg')}>
-                  JPEG
-                </button>
-                <button className="gen-dl-btn" onClick={() => downloadImage('png')}>
-                  PNG
-                </button>
+                <p>Creating {count} images...</p>
               </div>
             </div>
           )}
