@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MODEL_ENDPOINTS: Record<string, string> = {
-  grok: "fal-ai/xai/grok-imagine-video/v1.5/image-to-video",
-  seedance: "fal-ai/bytedance/seedance-2.0/image-to-video",
+  grok: "xai/grok-imagine-video/v1.5/image-to-video",
+  seedance: "bytedance/seedance-2.0/image-to-video",
 };
 
 export async function POST(req: NextRequest) {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const input: Record<string, unknown> = {
       image_url: imageUrl,
       aspect_ratio: aspectRatio,
-      duration: `${duration}s`,
+      duration: String(duration),
       enable_safety_checker: false,
     };
 
