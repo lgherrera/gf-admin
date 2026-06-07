@@ -738,6 +738,30 @@ body {
   background: var(--accent-dim);
 }
 
+.gen-refs-container {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 700px;
+}
+
+.gen-refs-container > .gen-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.gen-dropzone-compact {
+  padding: 16px;
+}
+
+.gen-dropzone-compact .gen-drop-icon {
+  font-size: 18px;
+}
+
+.gen-dropzone-compact .gen-drop-text {
+  font-size: 11px;
+}
+
 .gen-drop-icon {
   font-size: 24px;
   color: var(--text-muted);
@@ -1642,6 +1666,10 @@ body {
 
   .gen-results-grid {
     grid-template-columns: 1fr;
+  }
+
+  .gen-refs-container {
+    flex-direction: column;
   }
 
   .gallery-grid {

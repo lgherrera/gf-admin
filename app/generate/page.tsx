@@ -1,29 +1,29 @@
 // app/generate/page.tsx
- 
+
 'use client';
- 
+
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Nav from '../components/nav';
- 
+
 const ASPECT_RATIOS = [
   { label: '16:9', value: '16:9' },
   { label: '9:16', value: '9:16' },
   { label: '2:3', value: '2:3' },
 ];
- 
+
 const RESOLUTIONS = [
   { label: '1K', value: '1K' },
   { label: '2K', value: '2K' },
   { label: '4K', value: '4K' },
 ];
- 
+
 const COUNTS = [
   { label: '1', value: 1 },
   { label: '2', value: 2 },
   { label: '3', value: 3 },
   { label: '4', value: 4 },
 ];
- 
+
 const MODELS = [
   { label: 'Nano Banana Pro', value: 'nanobananapro', sub: 'fal.ai · 4K' },
   { label: 'Seedream 4.5', value: 'seedream', sub: 'ByteDance · fal' },
@@ -32,22 +32,22 @@ const MODELS = [
   { label: 'Flux 2 Pro', value: 'flux2pro', sub: 'Black Forest Labs' },
   { label: 'GPT Image 2', value: 'gptimage2', sub: 'OpenAI · fal' },
 ];
- 
+
 const RATIO_W: Record<string, number> = { '16:9': 16, '9:16': 9, '2:3': 2 };
 const RATIO_H: Record<string, number> = { '16:9': 9, '9:16': 16, '2:3': 3 };
- 
+
 const EYE_COLORS = ['blue', 'brown', 'green', 'cyan', 'amber', 'violet'];
- 
+
 // Models that do NOT support seed
 const NO_SEED_MODELS = new Set(['seedream5', 'flux2pro', 'gptimage2']);
- 
+
 interface GeneratedImage {
   url: string;
   prompt: string;
   ratio: string;
   seed: number | null;
 }
- 
+
 export default function GeneratePage() {
   const [password, setPassword] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
@@ -57,21 +57,28 @@ export default function GeneratePage() {
   const [count, setCount] = useState(1);
   const [model, setModel] = useState('nanobananapro');
   const [seed, setSeed] = useState('');
-  const [referenceImages, setReferenceImages] = useState<File[]>([]);
-  const [referencePreviews, setReferencePreviews] = useState<string[]>([]);
+
+  // Character references
+  const [charImages, setCharImages] = useState<File[]>([]);
+  const [charPreviews, setCharPreviews] = useState<string[]>([]);
+  const [charDragOver, setCharDragOver] = useState(false);
+  const charInputRef = useRef<HTMLInputElement>(null);
+
+  // Location references
+  const [locImages, setLocImages] = useState<File[]>([]);
+  const [locPreviews, setLocPreviews] = useState<string[]>([]);
+  const [locDragOver, setLocDragOver] = useState(false);
+  const locInputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GeneratedImage[]>([]);
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
- 
+
   const isV5 = model === 'seedream5';
   const isFlux2Pro = model === 'flux2pro';
   const showSeed = !NO_SEED_MODELS.has(model);
   const showRefs = model === 'seedream' || model === 'seedream5' || model === 'flux2pro' || model === 'nanobananapro' || model === 'gptimage2';
- 
-  const maxRefs = isV5 ? 10 : isFlux2Pro ? 9 : 5;
- 
+
   // Session persistence
   useEffect(() => {
     const saved = sessionStorage.getItem('admin-pwd');
@@ -80,30 +87,49 @@ export default function GeneratePage() {
       setAuthenticated(true);
     }
   }, []);
- 
+
+  // Clear refs when switching to a model that doesn't support them
+  useEffect(() => {
+    if (!showRefs) {
+      setCharImages([]); setCharPreviews([]);
+      setLocImages([]); setLocPreviews([]);
+    }
+  }, [showRefs]);
+
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
     sessionStorage.setItem('admin-pwd', password);
     setAuthenticated(true);
   };
- 
-  const handleFiles = useCallback((files: FileList | null) => {
-    if (!files) return;
-    const newFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    setReferenceImages((prev) => [...prev, ...newFiles]);
-    newFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) =>
-        setReferencePreviews((prev) => [...prev, e.target?.result as string]);
-      reader.readAsDataURL(file);
-    });
-  }, []);
- 
-  const removeImage = (index: number) => {
-    setReferenceImages((prev) => prev.filter((_, i) => i !== index));
-    setReferencePreviews((prev) => prev.filter((_, i) => i !== index));
+
+  const addFiles = useCallback(
+    (
+      files: FileList | null,
+      setImages: React.Dispatch<React.SetStateAction<File[]>>,
+      setPreviews: React.Dispatch<React.SetStateAction<string[]>>
+    ) => {
+      if (!files) return;
+      const newFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+      setImages((prev) => [...prev, ...newFiles]);
+      newFiles.forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = (e) =>
+          setPreviews((prev) => [...prev, e.target?.result as string]);
+        reader.readAsDataURL(file);
+      });
+    },
+    []
+  );
+
+  const removeFile = (
+    index: number,
+    setImages: React.Dispatch<React.SetStateAction<File[]>>,
+    setPreviews: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
- 
+
   const compressImage = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
       const img = new Image();
@@ -129,7 +155,28 @@ export default function GeneratePage() {
       img.onerror = reject;
       img.src = url;
     });
- 
+
+  /**
+   * Rewrite @c1, @c2, @l1, @l2 tags in the prompt to positional references.
+   * Array order: all character images first, then all location images.
+   */
+  const rewritePrompt = (raw: string, charCount: number, locCount: number): string => {
+    let rewritten = raw;
+
+    for (let i = 1; i <= charCount; i++) {
+      const tag = new RegExp(`@c${i}`, 'gi');
+      rewritten = rewritten.replace(tag, `the person shown in reference image ${i}`);
+    }
+
+    for (let i = 1; i <= locCount; i++) {
+      const tag = new RegExp(`@l${i}`, 'gi');
+      const imageIndex = charCount + i;
+      rewritten = rewritten.replace(tag, `the location shown in reference image ${imageIndex}`);
+    }
+
+    return rewritten;
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       setError('Enter a prompt before generating.');
@@ -139,15 +186,23 @@ export default function GeneratePage() {
     setError(null);
     setResults([]);
     try {
-      const base64Images = await Promise.all(referenceImages.map(compressImage));
+      // Combine: characters first, then locations
+      const allFiles = [...charImages, ...locImages];
+      const base64Images = await Promise.all(allFiles.map(compressImage));
+
       const parsedSeed = seed.trim() !== '' ? parseInt(seed, 10) : undefined;
       const randomEyeColor = EYE_COLORS[Math.floor(Math.random() * EYE_COLORS.length)];
-      const enrichedPrompt =
-        prompt.replace(
-          /\b(cyan|blue|brown|green|amber|violet)\s+eyes\b/gi,
-          `${randomEyeColor} eyes`
-        ) || `${prompt}, ${randomEyeColor} eyes`;
- 
+
+      let finalPrompt = prompt.replace(
+        /\b(cyan|blue|brown|green|amber|violet)\s+eyes\b/gi,
+        `${randomEyeColor} eyes`
+      ) || `${prompt}, ${randomEyeColor} eyes`;
+
+      // Rewrite @ tags if references are present
+      if (allFiles.length > 0) {
+        finalPrompt = rewritePrompt(finalPrompt, charImages.length, locImages.length);
+      }
+
       const res = await fetch('/api/generate/image', {
         method: 'POST',
         headers: {
@@ -155,7 +210,7 @@ export default function GeneratePage() {
           'x-admin-password': password,
         },
         body: JSON.stringify({
-          prompt: enrichedPrompt,
+          prompt: finalPrompt,
           aspectRatio: ratio,
           resolution,
           count,
@@ -164,17 +219,17 @@ export default function GeneratePage() {
           model,
         }),
       });
- 
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
- 
+
       const urls: string[] = data.urls ?? (data.url ? [data.url] : []);
       if (urls.length === 0) throw new Error('No image URLs received');
- 
+
       setResults(
         urls.map((url) => ({
           url,
-          prompt: enrichedPrompt,
+          prompt: finalPrompt,
           ratio,
           seed: data.seed ?? null,
         }))
@@ -185,7 +240,7 @@ export default function GeneratePage() {
       setLoading(false);
     }
   };
- 
+
   const downloadImage = async (imageUrl: string, format: 'jpeg' | 'png') => {
     try {
       const res = await fetch(imageUrl);
@@ -200,7 +255,7 @@ export default function GeneratePage() {
       window.open(imageUrl, '_blank');
     }
   };
- 
+
   if (!authenticated) {
     return (
       <div className="login-container">
@@ -227,9 +282,9 @@ export default function GeneratePage() {
       </div>
     );
   }
- 
+
   const previewAspect = `${RATIO_W[ratio]} / ${RATIO_H[ratio]}`;
- 
+
   return (
     <>
       <Nav />
@@ -237,7 +292,7 @@ export default function GeneratePage() {
         {/* Left: Controls */}
         <div className="gen-controls">
           <h1 className="gen-title">Image Generation</h1>
- 
+
           {/* Model */}
           <div className="gen-field">
             <label className="gen-label">Model</label>
@@ -254,20 +309,22 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
- 
+
           {/* Prompt */}
           <div className="gen-field">
             <label className="gen-label">Prompt</label>
             <textarea
               className="gen-textarea"
-              placeholder="Describe the image you want to create..."
+              placeholder={showRefs
+                ? "Use @c1 @c2 for characters, @l1 @l2 for locations..."
+                : "Describe the image you want to create..."}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={5}
             />
             <div className="gen-char-count">{prompt.length} chars</div>
           </div>
- 
+
           {/* Aspect Ratio */}
           <div className="gen-field">
             <label className="gen-label">Aspect Ratio</label>
@@ -283,7 +340,7 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
- 
+
           {/* Resolution */}
           <div className="gen-field">
             <label className="gen-label">Resolution</label>
@@ -299,7 +356,7 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
- 
+
           {/* Image Count */}
           <div className="gen-field">
             <label className="gen-label">Images</label>
@@ -315,7 +372,7 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
- 
+
           {/* Seed */}
           {showSeed && (
             <div className="gen-field">
@@ -343,64 +400,107 @@ export default function GeneratePage() {
               </div>
             </div>
           )}
- 
+
           {error && <div className="gen-error">{error}</div>}
- 
+
           <button className="gen-button" onClick={handleGenerate} disabled={loading}>
             {loading ? 'Generating...' : `Generate ${count > 1 ? `${count} Images` : 'Image'}`}
           </button>
         </div>
- 
+
         {/* Right: Preview */}
         <div className="gen-preview-panel">
-          {/* Reference Images — above preview */}
+          {/* Reference Images — Character + Location dropzones */}
           {showRefs && (
-            <div className="gen-field" style={{ width: '100%', maxWidth: 500 }}>
-              <label className="gen-label" style={{ color: 'var(--accent)' }}>
-                Reference Images <span className="gen-optional">(optional, up to {maxRefs})</span>
-              </label>
-              <div
-                className={`gen-dropzone ${dragOver ? 'gen-dropzone-active' : ''}`}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  handleFiles(e.dataTransfer.files);
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  style={{ display: 'none' }}
-                  onChange={(e) => handleFiles(e.target.files)}
-                />
-                <span className="gen-drop-icon">+</span>
-                <span className="gen-drop-text">Drop or click to upload</span>
-              </div>
-              {referencePreviews.length > 0 && (
-                <div className="gen-ref-grid">
-                  {referencePreviews.map((src, i) => (
-                    <div key={i} className="gen-ref-item">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt={`Ref ${i + 1}`} className="gen-ref-img" />
-                      <button className="gen-ref-remove" onClick={() => removeImage(i)}>
-                        ×
-                      </button>
-                      <span className="gen-ref-label">Fig {i + 1}</span>
-                    </div>
-                  ))}
+            <div className="gen-refs-container">
+              {/* Characters */}
+              <div className="gen-field">
+                <label className="gen-label" style={{ color: 'var(--accent)' }}>
+                  Characters <span className="gen-optional">(@c1, @c2...)</span>
+                </label>
+                <div
+                  className={`gen-dropzone gen-dropzone-compact ${charDragOver ? 'gen-dropzone-active' : ''}`}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setCharDragOver(false);
+                    addFiles(e.dataTransfer.files, setCharImages, setCharPreviews);
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); setCharDragOver(true); }}
+                  onDragLeave={() => setCharDragOver(false)}
+                  onClick={() => charInputRef.current?.click()}
+                >
+                  <input
+                    ref={charInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => { addFiles(e.target.files, setCharImages, setCharPreviews); e.target.value = ''; }}
+                  />
+                  <span className="gen-drop-icon">+</span>
+                  <span className="gen-drop-text">Drop character refs</span>
                 </div>
-              )}
+                {charPreviews.length > 0 && (
+                  <div className="gen-ref-grid">
+                    {charPreviews.map((src, i) => (
+                      <div key={i} className="gen-ref-item">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`@c${i + 1}`} className="gen-ref-img" />
+                        <button className="gen-ref-remove" onClick={() => removeFile(i, setCharImages, setCharPreviews)}>
+                          ×
+                        </button>
+                        <span className="gen-ref-label">@c{i + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Locations */}
+              <div className="gen-field">
+                <label className="gen-label" style={{ color: 'var(--blue)' }}>
+                  Locations <span className="gen-optional">(@l1, @l2...)</span>
+                </label>
+                <div
+                  className={`gen-dropzone gen-dropzone-compact ${locDragOver ? 'gen-dropzone-active' : ''}`}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setLocDragOver(false);
+                    addFiles(e.dataTransfer.files, setLocImages, setLocPreviews);
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); setLocDragOver(true); }}
+                  onDragLeave={() => setLocDragOver(false)}
+                  onClick={() => locInputRef.current?.click()}
+                >
+                  <input
+                    ref={locInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => { addFiles(e.target.files, setLocImages, setLocPreviews); e.target.value = ''; }}
+                  />
+                  <span className="gen-drop-icon">+</span>
+                  <span className="gen-drop-text">Drop location refs</span>
+                </div>
+                {locPreviews.length > 0 && (
+                  <div className="gen-ref-grid">
+                    {locPreviews.map((src, i) => (
+                      <div key={i} className="gen-ref-item">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`@l${i + 1}`} className="gen-ref-img" />
+                        <button className="gen-ref-remove" onClick={() => removeFile(i, setLocImages, setLocPreviews)}>
+                          ×
+                        </button>
+                        <span className="gen-ref-label">@l{i + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
- 
+
           {/* Single image preview */}
           {results.length <= 1 && (
             <>
@@ -421,7 +521,7 @@ export default function GeneratePage() {
                   </div>
                 ) : null}
               </div>
- 
+
               {results.length === 1 && !loading && (
                 <div className="gen-download-bar">
                   <span className="gen-seed-badge">
@@ -439,7 +539,7 @@ export default function GeneratePage() {
               )}
             </>
           )}
- 
+
           {/* Multi-image grid */}
           {results.length > 1 && !loading && (
             <div className="gen-results-grid">
@@ -466,7 +566,7 @@ export default function GeneratePage() {
               ))}
             </div>
           )}
- 
+
           {/* Loading state for multi */}
           {results.length === 0 && loading && count > 1 && (
             <div className="gen-preview-frame" style={{ aspectRatio: previewAspect }}>
