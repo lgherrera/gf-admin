@@ -9,10 +9,12 @@ const links = [
   { href: '/', label: 'Dashboard' },
   { href: '/messages', label: 'Messages' },
   { href: '/generations', label: 'Generations' },
-  { href: '/generate', label: 'Generate' },
+  { href: '/generate', label: 'Images' },
+  { href: '/generate/videos', label: 'Videos' },
   { href: '/runpod', label: 'RunPod' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/atlas-cloud', label: 'Atlas Cloud' },
+  { href: '/funnel', label: 'Funnel' },
 ];
 
 export default function Nav() {
