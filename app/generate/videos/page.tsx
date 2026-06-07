@@ -25,7 +25,7 @@ export default function VideosPage() {
   const [ratio, setRatio] = useState('9:16');
   const [model, setModel] = useState('seedance');
   const [duration, setDuration] = useState(12);
-  const [generateAudio, setGenerateAudio] = useState(false);
+  const [generateAudio, setGenerateAudio] = useState(true);
 
   // Reference image (required for image-to-video)
   const [refImage, setRefImage] = useState<File | null>(null);
