@@ -849,6 +849,55 @@ body {
   cursor: not-allowed;
 }
 
+/* Toggle */
+
+.gen-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.gen-toggle-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: var(--border);
+  border-radius: 10px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.gen-toggle-on {
+  background: var(--accent);
+}
+
+.gen-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.gen-toggle-on .gen-toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* Video Result */
+
+.gen-result-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  border-radius: var(--radius);
+}
+
 /* Preview Panel */
 
 .gen-preview-panel {
