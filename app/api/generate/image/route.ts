@@ -77,7 +77,9 @@ export async function POST(req: NextRequest) {
     const isFlux2Pro = selectedModel === "flux2pro";
     const isSeedream = selectedModel === "seedream" || selectedModel === "seedream5";
 
-    const supportsRefs = isSeedream || isFlux2Pro || selectedModel === "nanobananapro" || selectedModel === "gptimage2";
+    const isNanoBanana = selectedModel === "nanobananapro";
+
+    const supportsRefs = isSeedream || isFlux2Pro || isNanoBanana || selectedModel === "gptimage2";
 
     const endpoint = MODEL_ENDPOINTS[selectedModel] ?? MODEL_ENDPOINTS.seedream;
 
@@ -113,13 +115,21 @@ export async function POST(req: NextRequest) {
     /* ── Build input payload ─────────────────────────────────────── */
     const input: Record<string, unknown> = {
       prompt,
-      image_size: imageSize,
       num_images: numImages,
       enable_safety_checker: false,
       ...(resolvedSeed !== undefined && { seed: resolvedSeed }),
       ...(isFlux1Dev && { guidance_scale: 3.5 }),
       ...(isFlux2Pro && { safety_tolerance: "5" }),
     };
+
+    // Nano Banana Pro uses aspect_ratio + resolution strings directly
+    if (isNanoBanana) {
+      input.aspect_ratio = aspectRatio;
+      input.resolution = res;
+      input.safety_tolerance = "6";
+    } else {
+      input.image_size = imageSize;
+    }
 
     if (useEditEndpoint && referenceImageUrls.length > 0) {
       input.image_urls = referenceImageUrls;
