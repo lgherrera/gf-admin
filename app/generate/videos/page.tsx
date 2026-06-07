@@ -134,7 +134,10 @@ export default function VideosPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Generation failed');
+      if (!res.ok) {
+        const errMsg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+        throw new Error(errMsg || 'Generation failed');
+      }
       if (!data.url) throw new Error('No video URL received');
 
       setResultUrl(data.url);

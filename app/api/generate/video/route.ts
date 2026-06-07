@@ -74,7 +74,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: videoUrl });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
+    const msg = err instanceof Error
+      ? err.message
+      : typeof err === "object" && err !== null
+        ? JSON.stringify(err)
+        : "Unknown error";
     console.error("Generate video error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
