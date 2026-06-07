@@ -356,7 +356,7 @@ export default function GeneratePage() {
           {/* Reference Images — above preview */}
           {showRefs && (
             <div className="gen-field" style={{ width: '100%', maxWidth: 500 }}>
-              <label className="gen-label">
+              <label className="gen-label" style={{ color: 'var(--accent)' }}>
                 Reference Images <span className="gen-optional">(optional, up to {maxRefs})</span>
               </label>
               <div
