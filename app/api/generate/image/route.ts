@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     const isFlux2Pro = selectedModel === "flux2pro";
     const isSeedream = selectedModel === "seedream" || selectedModel === "seedream5";
 
-    const supportsRefs = isSeedream || isFlux2Pro;
+    const supportsRefs = isSeedream || isFlux2Pro || selectedModel === "nanobananapro" || selectedModel === "gptimage2";
 
     const endpoint = MODEL_ENDPOINTS[selectedModel] ?? MODEL_ENDPOINTS.seedream;
 

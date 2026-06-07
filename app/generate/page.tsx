@@ -68,7 +68,7 @@ export default function GeneratePage() {
   const isV5 = model === 'seedream5';
   const isFlux2Pro = model === 'flux2pro';
   const showSeed = !NO_SEED_MODELS.has(model);
-  const showRefs = model === 'seedream' || model === 'seedream5' || model === 'flux2pro';
+  const showRefs = model === 'seedream' || model === 'seedream5' || model === 'flux2pro' || model === 'nanobananapro' || model === 'gptimage2';
 
   const maxRefs = isV5 ? 10 : isFlux2Pro ? 9 : 5;
 
