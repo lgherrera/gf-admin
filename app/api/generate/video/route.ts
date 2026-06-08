@@ -18,10 +18,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt, aspectRatio, duration, model, referenceImage, generateAudio } =
+    const { prompt, aspectRatio, resolution, duration, model, referenceImage, generateAudio } =
       (await req.json()) as {
         prompt: string;
         aspectRatio: string;
+        resolution?: string;
         duration: number;
         model: string;
         referenceImage: string;
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
     const input: Record<string, unknown> = {
       image_url: imageUrl,
       aspect_ratio: aspectRatio,
+      resolution: resolution ?? "720p",
       duration: String(duration),
       enable_safety_checker: false,
     };

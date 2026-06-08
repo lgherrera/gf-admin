@@ -10,6 +10,12 @@ const ASPECT_RATIOS = [
   { label: '9:16', value: '9:16' },
 ];
 
+const RESOLUTIONS = [
+  { label: '480p', value: '480p' },
+  { label: '720p', value: '720p' },
+  { label: '1080p', value: '1080p' },
+];
+
 const MODELS = [
   { label: 'Seedance 2.0', value: 'seedance', sub: 'ByteDance · fal' },
   { label: 'Grok Imagine 1.5', value: 'grok', sub: 'xAI · fal' },
@@ -23,6 +29,7 @@ export default function VideosPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [ratio, setRatio] = useState('9:16');
+  const [resolution, setResolution] = useState('720p');
   const [model, setModel] = useState('seedance');
   const [duration, setDuration] = useState(12);
   const [generateAudio, setGenerateAudio] = useState(true);
@@ -126,6 +133,7 @@ export default function VideosPage() {
         body: JSON.stringify({
           prompt: prompt.trim() || undefined,
           aspectRatio: ratio,
+          resolution,
           duration,
           model,
           referenceImage: base64,
@@ -229,6 +237,22 @@ export default function VideosPage() {
                   key={r.value}
                   className={`gen-ratio-btn ${ratio === r.value ? 'gen-ratio-active' : ''}`}
                   onClick={() => setRatio(r.value)}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Resolution */}
+          <div className="gen-field">
+            <label className="gen-label">Resolution</label>
+            <div className="gen-ratio-grid">
+              {RESOLUTIONS.map((r) => (
+                <button
+                  key={r.value}
+                  className={`gen-ratio-btn ${resolution === r.value ? 'gen-ratio-active' : ''}`}
+                  onClick={() => setResolution(r.value)}
                 >
                   {r.label}
                 </button>
@@ -345,7 +369,7 @@ export default function VideosPage() {
 
           {resultUrl && !loading && (
             <div className="gen-download-bar">
-              <span className="gen-seed-badge">{duration}s · {ratio} · 720p</span>
+              <span className="gen-seed-badge">{duration}s · {ratio} · {resolution}</span>
               <button className="gen-dl-btn" onClick={downloadVideo}>
                 Download MP4
               </button>
