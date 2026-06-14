@@ -2,9 +2,19 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Nav from '../../components/nav';
 import Link from 'next/link';
+
+type Range = '1' | '7' | '14' | '30' | 'all';
+
+const RANGE_OPTIONS: { value: Range; label: string }[] = [
+  { value: '1', label: 'Yesterday' },
+  { value: '7', label: '7D' },
+  { value: '14', label: '14D' },
+  { value: '30', label: '30D' },
+  { value: 'all', label: 'All Time' },
+];
 
 interface FunnelStep {
   label: string;
@@ -16,15 +26,19 @@ export default function TotalFunnelPage() {
   const [steps, setSteps] = useState<FunnelStep[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [range, setRange] = useState<Range>('all');
 
-  useEffect(() => {
+  const fetchFunnel = useCallback((r: Range) => {
     const password = sessionStorage.getItem('admin-pwd');
     if (!password) {
       window.location.href = '/';
       return;
     }
 
-    fetch('/api/funnel/total', {
+    setLoading(true);
+    setError('');
+
+    fetch(`/api/funnel/total?range=${r}`, {
       headers: { 'x-admin-password': password },
     })
       .then((res) => res.json())
@@ -39,6 +53,15 @@ export default function TotalFunnelPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    fetchFunnel(range);
+  }, [fetchFunnel, range]);
+
+  const handleRangeChange = (r: Range) => {
+    setRange(r);
+    fetchFunnel(r);
+  };
+
   const maxCount = steps.length > 0 ? Math.max(...steps.map((s) => s.count), 1) : 1;
 
   return (
@@ -46,7 +69,21 @@ export default function TotalFunnelPage() {
       <Nav />
       <div className="funnel-page">
         <Link href="/funnel" className="funnel-back">← Funnels</Link>
-        <h1 className="funnel-page-title">Total Users Funnel</h1>
+        <div className="funnel-header">
+          <h1 className="funnel-page-title">Total Users Funnel</h1>
+          <div className="range-toggle">
+            {RANGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleRangeChange(opt.value)}
+                className={`range-button ${range === opt.value ? 'range-button-active' : ''}`}
+                disabled={loading}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '60px 0' }}>Loading...</p>}
         {error && <p style={{ color: 'var(--accent)', textAlign: 'center', padding: '60px 0' }}>{error}</p>}

@@ -12,6 +12,12 @@
     font-size: 20px;
     font-weight: 700;
     letter-spacing: -0.5px;
+  }
+  
+  .funnel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 24px;
   }
   

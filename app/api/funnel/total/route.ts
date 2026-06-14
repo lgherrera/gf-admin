@@ -5,27 +5,36 @@ import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
+function getDateFilter(range: string): string | null {
+  const days = range === '1' ? 1 : range === '7' ? 7 : range === '14' ? 14 : range === '30' ? 30 : null;
+  if (!days) return null;
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString();
+}
+
 export async function GET(req: NextRequest) {
   const password = req.headers.get('x-admin-password');
   if (password !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const range = req.nextUrl.searchParams.get('range') || 'all';
+  const since = getDateFilter(range);
+
   try {
-    const [middleware, profiles, homepage, chat] = await Promise.all([
-      supabase
-        .from('groobyte_callbacks')
-        .select('*', { count: 'exact', head: true }),
-      supabase
-        .from('user_profiles')
-        .select('*', { count: 'exact', head: true }),
-      supabase
-        .from('homepage_visits')
-        .select('*', { count: 'exact', head: true }),
-      supabase
-        .from('chat_visits')
-        .select('*', { count: 'exact', head: true }),
-    ]);
+    const queries = [
+      { table: 'groobyte_callbacks', dateCol: 'received_at' },
+      { table: 'user_profiles', dateCol: 'created_at' },
+      { table: 'homepage_visits', dateCol: 'created_at' },
+      { table: 'chat_visits', dateCol: 'created_at' },
+    ].map(({ table, dateCol }) => {
+      let q = supabase.from(table).select('*', { count: 'exact', head: true });
+      if (since) q = q.gte(dateCol, since);
+      return q;
+    });
+
+    const [middleware, profiles, homepage, chat] = await Promise.all(queries);
 
     const steps = [
       { label: 'Middleware', description: 'Total Users at Middleware', count: middleware.count ?? 0 },
