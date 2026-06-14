@@ -44,14 +44,12 @@ export default function TotalFunnelPage() {
   return (
     <>
       <Nav />
-      <main className="main-content">
-        <div className="funnel-page-header">
-          <Link href="/funnel" className="funnel-back">← Funnels</Link>
-          <h1 className="page-title">Total Users Funnel</h1>
-        </div>
+      <div className="funnel-page">
+        <Link href="/funnel" className="funnel-back">← Funnels</Link>
+        <h1 className="funnel-page-title">Total Users Funnel</h1>
 
-        {loading && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '4rem 0' }}>Loading...</p>}
-        {error && <p style={{ color: '#ef4444', textAlign: 'center', padding: '4rem 0' }}>{error}</p>}
+        {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '60px 0' }}>Loading...</p>}
+        {error && <p style={{ color: 'var(--accent)', textAlign: 'center', padding: '60px 0' }}>{error}</p>}
 
         {!loading && !error && (
           <div className="funnel-container">
@@ -96,7 +94,7 @@ export default function TotalFunnelPage() {
             })}
           </div>
         )}
-      </main>
+      </div>
     </>
   );
 }

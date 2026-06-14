@@ -13,8 +13,8 @@ export default function FunnelIndex() {
   return (
     <>
       <Nav />
-      <main className="main-content">
-        <h1 className="page-title">Funnels</h1>
+      <div className="funnel-page">
+        <h1 className="funnel-page-title">Funnels</h1>
         <div className="funnel-index-grid">
           {funnels.map((f) => (
             <Link key={f.href} href={f.href} className="funnel-index-card">
@@ -23,7 +23,7 @@ export default function FunnelIndex() {
             </Link>
           ))}
         </div>
-      </main>
+      </div>
     </>
   );
 }
