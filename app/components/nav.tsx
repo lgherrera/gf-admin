@@ -14,11 +14,14 @@ const links = [
   { href: '/runpod', label: 'RunPod' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/atlas-cloud', label: 'Atlas Cloud' },
-  { href: '/funnel', label: 'Funnel' },
+  { href: '/funnel', label: 'Funnels' },
 ];
 
 export default function Nav() {
   const pathname = usePathname();
+
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   return (
     <nav className="nav">
@@ -28,7 +31,7 @@ export default function Nav() {
           <Link
             key={link.href}
             href={link.href}
-            className={`nav-link ${pathname === link.href ? 'nav-link-active' : ''}`}
+            className={`nav-link ${isActive(link.href) ? 'nav-link-active' : ''}`}
           >
             {link.label}
           </Link>
