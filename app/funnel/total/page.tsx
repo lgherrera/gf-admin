@@ -18,7 +18,7 @@ export default function TotalFunnelPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const password = sessionStorage.getItem('admin_password');
+    const password = sessionStorage.getItem('admin-pwd');
     if (!password) {
       window.location.href = '/';
       return;
