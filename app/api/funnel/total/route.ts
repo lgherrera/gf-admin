@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
       { label: 'Chat', description: 'Total Users at Chat Pages', count: chat.count ?? 0 },
     ];
 
-    return NextResponse.json({ steps });
+    return NextResponse.json({ steps, serverTime: new Date().toISOString() });
   } catch (error) {
     console.error('Funnel error:', error);
     return NextResponse.json({ error: 'Failed to fetch funnel data' }, { status: 500 });

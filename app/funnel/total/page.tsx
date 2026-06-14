@@ -27,6 +27,7 @@ export default function TotalFunnelPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [range, setRange] = useState<Range>('all');
+  const [serverTime, setServerTime] = useState('');
 
   const fetchFunnel = useCallback((r: Range) => {
     const password = sessionStorage.getItem('admin-pwd');
@@ -47,6 +48,7 @@ export default function TotalFunnelPage() {
           setError(data.error);
         } else {
           setSteps(data.steps);
+          setServerTime(data.serverTime);
         }
       })
       .catch(() => setError('Failed to load funnel data'))
@@ -84,6 +86,12 @@ export default function TotalFunnelPage() {
             ))}
           </div>
         </div>
+
+        {serverTime && !loading && (
+          <p className="funnel-period">
+            Server time: {new Date(serverTime).toLocaleString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })} UTC
+          </p>
+        )}
 
         {loading && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '60px 0' }}>Loading...</p>}
         {error && <p style={{ color: 'var(--accent)', textAlign: 'center', padding: '60px 0' }}>{error}</p>}
