@@ -5,12 +5,22 @@ import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-function getDateFilter(range: string): string | null {
-  const days = range === '1' ? 1 : range === '7' ? 7 : range === '14' ? 14 : range === '30' ? 30 : null;
+function getDateRange(range: string): { since: string; until?: string } | null {
+  if (range === 'all') return null;
+
+  if (range === '1') {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    return { since: yesterday.toISOString(), until: today.toISOString() };
+  }
+
+  const days = range === '7' ? 7 : range === '14' ? 14 : range === '30' ? 30 : null;
   if (!days) return null;
   const d = new Date();
   d.setDate(d.getDate() - days);
-  return d.toISOString();
+  return { since: d.toISOString() };
 }
 
 export async function GET(req: NextRequest) {
@@ -20,7 +30,7 @@ export async function GET(req: NextRequest) {
   }
 
   const range = req.nextUrl.searchParams.get('range') || 'all';
-  const since = getDateFilter(range);
+  const dateRange = getDateRange(range);
 
   try {
     const queries = [
@@ -30,7 +40,10 @@ export async function GET(req: NextRequest) {
       { table: 'chat_visits', dateCol: 'created_at' },
     ].map(({ table, dateCol }) => {
       let q = supabase.from(table).select('*', { count: 'exact', head: true });
-      if (since) q = q.gte(dateCol, since);
+      if (dateRange) {
+        q = q.gte(dateCol, dateRange.since);
+        if (dateRange.until) q = q.lt(dateCol, dateRange.until);
+      }
       return q;
     });
 
