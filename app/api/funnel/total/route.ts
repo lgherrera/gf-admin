@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
         .from('user_profiles')
         .select('*', { count: 'exact', head: true }),
       supabase
-        .from('home_pages')
+        .from('homepage_visits')
         .select('*', { count: 'exact', head: true }),
     ]);
 
