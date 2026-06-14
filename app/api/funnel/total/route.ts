@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const [middleware, profiles, homepage] = await Promise.all([
+    const [middleware, profiles, homepage, chat] = await Promise.all([
       supabase
         .from('groobyte_callbacks')
         .select('*', { count: 'exact', head: true }),
@@ -22,12 +22,16 @@ export async function GET(req: NextRequest) {
       supabase
         .from('homepage_visits')
         .select('*', { count: 'exact', head: true }),
+      supabase
+        .from('chat_visits')
+        .select('*', { count: 'exact', head: true }),
     ]);
 
     const steps = [
       { label: 'Middleware', description: 'Total Users at Middleware', count: middleware.count ?? 0 },
       { label: 'Profiles', description: 'Total New Users at Profiles', count: profiles.count ?? 0 },
       { label: 'Home Page', description: 'Total Users at Home Page', count: homepage.count ?? 0 },
+      { label: 'Chat', description: 'Total Users at Chat Pages', count: chat.count ?? 0 },
     ];
 
     return NextResponse.json({ steps });
