@@ -163,6 +163,48 @@
   font-family: var(--font-mono);
 }
 
+/* ── Indented branch steps ── */
+
+.funnel-step-indented {
+  margin-left: 60px;
+  position: relative;
+}
+
+.funnel-step-indented::before {
+  content: '';
+  position: absolute;
+  left: -36px;
+  top: 0;
+  bottom: 50%;
+  width: 2px;
+  background: var(--border);
+}
+
+.funnel-step-indented::after {
+  content: '';
+  position: absolute;
+  left: -36px;
+  top: 50%;
+  width: 24px;
+  height: 2px;
+  background: var(--border);
+}
+
+/* Continuous vertical line between indented siblings */
+.funnel-step-indented + .funnel-step-indented::before {
+  top: -1.5rem;
+}
+
+.funnel-step-indented .funnel-bar-track {
+  height: 38px;
+}
+
+.funnel-step-indented .funnel-step-number {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+
 /* ── Rating Toggle ── */
 
 .funnel-rating-nsfw {
@@ -191,5 +233,18 @@
   .funnel-header-controls {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .funnel-step-indented {
+    margin-left: 32px;
+  }
+
+  .funnel-step-indented::before {
+    left: -20px;
+  }
+
+  .funnel-step-indented::after {
+    left: -20px;
+    width: 12px;
   }
 }

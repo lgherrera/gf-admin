@@ -30,16 +30,12 @@ export async function GET(req: NextRequest) {
   }
 
   const range = req.nextUrl.searchParams.get('range') || 'all';
-  const rating = req.nextUrl.searchParams.get('rating') || 'all'; // 'all' | 'nsfw' | 'sfw'
+  const rating = req.nextUrl.searchParams.get('rating') || 'all';
   const dateRange = getDateRange(range);
 
   try {
-    const queries = [
-      { table: 'groobyte_callbacks', dateCol: 'received_at' },
-      { table: 'user_profiles', dateCol: 'created_at' },
-      { table: 'homepage_visits', dateCol: 'created_at' },
-      { table: 'chat_visits', dateCol: 'created_at' },
-    ].map(({ table, dateCol }) => {
+    // Helper: build a count query with date + rating filters
+    function buildQuery(table: string, dateCol: string) {
       let q = supabase.from(table).select('*', { count: 'exact', head: true });
       if (dateRange) {
         q = q.gte(dateCol, dateRange.since);
@@ -49,15 +45,39 @@ export async function GET(req: NextRequest) {
         q = q.eq('content_rating', rating);
       }
       return q;
-    });
+    }
 
-    const [middleware, profiles, homepage, chat] = await Promise.all(queries);
+    // Helper: count page_visits for a specific page value
+    function buildPageQuery(page: string) {
+      let q = supabase.from('page_visits').select('*', { count: 'exact', head: true }).eq('page', page);
+      if (dateRange) {
+        q = q.gte('created_at', dateRange.since);
+        if (dateRange.until) q = q.lt('created_at', dateRange.until);
+      }
+      if (rating !== 'all') {
+        q = q.eq('content_rating', rating);
+      }
+      return q;
+    }
+
+    const [middleware, profiles, homepage, chat, create, shorts, renderImage] = await Promise.all([
+      buildQuery('groobyte_callbacks', 'received_at'),
+      buildQuery('user_profiles', 'created_at'),
+      buildQuery('homepage_visits', 'created_at'),
+      buildQuery('chat_visits', 'created_at'),
+      buildPageQuery('create'),
+      buildPageQuery('shorts'),
+      buildPageQuery('render_image'),
+    ]);
 
     const steps = [
-      { label: 'Middleware', description: 'Total Users at Middleware', count: middleware.count ?? 0 },
-      { label: 'Profiles', description: 'Total New Users at Profiles', count: profiles.count ?? 0 },
-      { label: 'Home Page', description: 'Total Users at Home Page', count: homepage.count ?? 0 },
-      { label: 'Chat', description: 'Total Users at Chat Pages', count: chat.count ?? 0 },
+      { label: 'Middleware', description: 'Total Users at Middleware', count: middleware.count ?? 0, indent: false },
+      { label: 'Profiles', description: 'Total New Users at Profiles', count: profiles.count ?? 0, indent: false },
+      { label: 'Home Page', description: 'Total Users at Home Page', count: homepage.count ?? 0, indent: false },
+      { label: 'Chat', description: 'Total Users at Chat Pages', count: chat.count ?? 0, indent: true },
+      { label: 'Create', description: 'Total Users at Create Page', count: create.count ?? 0, indent: true },
+      { label: 'Shorts', description: 'Total Users at Shorts Pages', count: shorts.count ?? 0, indent: true },
+      { label: 'Render Image', description: 'Total Users at Render Image', count: renderImage.count ?? 0, indent: true },
     ];
 
     return NextResponse.json({ steps, serverTime: new Date().toISOString() });

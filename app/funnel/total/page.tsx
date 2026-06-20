@@ -27,6 +27,7 @@ interface FunnelStep {
   label: string;
   description: string;
   count: number;
+  indent: boolean;
 }
 
 export default function TotalFunnelPage() {
@@ -75,7 +76,17 @@ export default function TotalFunnelPage() {
     setRating(rt);
   };
 
-  const maxCount = steps.length > 0 ? Math.max(...steps.map((s) => s.count), 1) : 1;
+  // Max count for bar scaling — compute separately for top-level and indented
+  const topSteps = steps.filter((s) => !s.indent);
+  const indentedSteps = steps.filter((s) => s.indent);
+  const maxTopCount = topSteps.length > 0 ? Math.max(...topSteps.map((s) => s.count), 1) : 1;
+  const maxIndentedCount = indentedSteps.length > 0 ? Math.max(...indentedSteps.map((s) => s.count), 1) : 1;
+
+  // Homepage count for branch conversion rates
+  const homepageCount = steps.find((s) => s.label === 'Home Page')?.count ?? 0;
+
+  // Step numbering: top-level gets 1,2,3 — indented all get 4
+  let topNumber = 0;
 
   return (
     <>
@@ -132,27 +143,54 @@ export default function TotalFunnelPage() {
         {!loading && !error && (
           <div className="funnel-container">
             {steps.map((step, i) => {
+              const isIndented = step.indent;
+
+              // Determine step number
+              let stepNumber: number;
+              if (!isIndented) {
+                topNumber++;
+                stepNumber = topNumber;
+              } else {
+                stepNumber = topNumber + 1;
+              }
+
+              // Bar width relative to its group
+              const maxCount = isIndented ? maxIndentedCount : maxTopCount;
               const widthPct = (step.count / maxCount) * 100;
-              const prevCount = i > 0 ? steps[i - 1].count : null;
-              const dropoff = prevCount && prevCount > 0
-                ? (((prevCount - step.count) / prevCount) * 100).toFixed(1)
-                : null;
-              const conversionFromTop = steps[0].count > 0
-                ? ((step.count / steps[0].count) * 100).toFixed(1)
-                : '0';
+
+              // Conversion stats
+              let dropoff: string | null = null;
+              let conversionFromTop: string | null = null;
+
+              if (isIndented) {
+                // Indented steps: dropoff and conversion relative to Homepage
+                if (homepageCount > 0) {
+                  dropoff = (((homepageCount - step.count) / homepageCount) * 100).toFixed(1);
+                  conversionFromTop = ((step.count / steps[0].count) * 100).toFixed(1);
+                }
+              } else if (i > 0) {
+                // Top-level steps: dropoff from previous top-level step
+                const prevCount = steps[i - 1].count;
+                if (prevCount > 0) {
+                  dropoff = (((prevCount - step.count) / prevCount) * 100).toFixed(1);
+                }
+                if (steps[0].count > 0) {
+                  conversionFromTop = ((step.count / steps[0].count) * 100).toFixed(1);
+                }
+              }
 
               return (
-                <div key={step.label} className="funnel-step">
+                <div key={step.label} className={`funnel-step ${isIndented ? 'funnel-step-indented' : ''}`}>
                   <div className="funnel-step-header">
                     <div className="funnel-step-label">
-                      <span className="funnel-step-number">{i + 1}</span>
+                      <span className="funnel-step-number">{stepNumber}</span>
                       {step.description}
                     </div>
                     <div className="funnel-step-stats">
                       {dropoff && (
                         <span className="funnel-dropoff">▼ {dropoff}%</span>
                       )}
-                      {i > 0 && (
+                      {conversionFromTop && i > 0 && (
                         <span className="funnel-conversion">{conversionFromTop}% of top</span>
                       )}
                     </div>
