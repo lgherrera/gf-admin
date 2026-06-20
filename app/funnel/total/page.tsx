@@ -7,6 +7,7 @@ import Nav from '../../components/nav';
 import Link from 'next/link';
 
 type Range = '1' | '7' | '14' | '30' | 'all';
+type Rating = 'all' | 'nsfw' | 'sfw';
 
 const RANGE_OPTIONS: { value: Range; label: string }[] = [
   { value: '1', label: 'Yesterday' },
@@ -14,6 +15,12 @@ const RANGE_OPTIONS: { value: Range; label: string }[] = [
   { value: '14', label: '14D' },
   { value: '30', label: '30D' },
   { value: 'all', label: 'All Time' },
+];
+
+const RATING_OPTIONS: { value: Rating; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'nsfw', label: 'NSFW' },
+  { value: 'sfw', label: 'SFW' },
 ];
 
 interface FunnelStep {
@@ -27,9 +34,10 @@ export default function TotalFunnelPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [range, setRange] = useState<Range>('all');
+  const [rating, setRating] = useState<Rating>('all');
   const [serverTime, setServerTime] = useState('');
 
-  const fetchFunnel = useCallback((r: Range) => {
+  const fetchFunnel = useCallback((r: Range, rt: Rating) => {
     const password = sessionStorage.getItem('admin-pwd');
     if (!password) {
       window.location.href = '/';
@@ -39,7 +47,7 @@ export default function TotalFunnelPage() {
     setLoading(true);
     setError('');
 
-    fetch(`/api/funnel/total?range=${r}`, {
+    fetch(`/api/funnel/total?range=${r}&rating=${rt}`, {
       headers: { 'x-admin-password': password },
     })
       .then((res) => res.json())
@@ -56,12 +64,15 @@ export default function TotalFunnelPage() {
   }, []);
 
   useEffect(() => {
-    fetchFunnel(range);
-  }, [fetchFunnel, range]);
+    fetchFunnel(range, rating);
+  }, [fetchFunnel, range, rating]);
 
   const handleRangeChange = (r: Range) => {
     setRange(r);
-    fetchFunnel(r);
+  };
+
+  const handleRatingChange = (rt: Rating) => {
+    setRating(rt);
   };
 
   const maxCount = steps.length > 0 ? Math.max(...steps.map((s) => s.count), 1) : 1;
@@ -73,17 +84,39 @@ export default function TotalFunnelPage() {
         <Link href="/funnel" className="funnel-back">← Funnels</Link>
         <div className="funnel-header">
           <h1 className="funnel-page-title">Total Users Funnel</h1>
-          <div className="range-toggle">
-            {RANGE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => handleRangeChange(opt.value)}
-                className={`range-button ${range === opt.value ? 'range-button-active' : ''}`}
-                disabled={loading}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="funnel-header-controls">
+            <div className="range-toggle">
+              {RATING_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleRatingChange(opt.value)}
+                  className={`range-button ${
+                    rating === opt.value
+                      ? opt.value === 'nsfw'
+                        ? 'funnel-rating-nsfw'
+                        : opt.value === 'sfw'
+                        ? 'funnel-rating-sfw'
+                        : 'range-button-active'
+                      : ''
+                  }`}
+                  disabled={loading}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div className="range-toggle">
+              {RANGE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleRangeChange(opt.value)}
+                  className={`range-button ${range === opt.value ? 'range-button-active' : ''}`}
+                  disabled={loading}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
   }
 
   const range = req.nextUrl.searchParams.get('range') || 'all';
+  const rating = req.nextUrl.searchParams.get('rating') || 'all'; // 'all' | 'nsfw' | 'sfw'
   const dateRange = getDateRange(range);
 
   try {
@@ -43,6 +44,9 @@ export async function GET(req: NextRequest) {
       if (dateRange) {
         q = q.gte(dateCol, dateRange.since);
         if (dateRange.until) q = q.lt(dateCol, dateRange.until);
+      }
+      if (rating !== 'all') {
+        q = q.eq('content_rating', rating);
       }
       return q;
     });
