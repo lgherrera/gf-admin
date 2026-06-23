@@ -36,6 +36,8 @@ interface Metrics {
   totalImages: number;
   activeToday: number;
   customGirlfriends: number;
+  activeUsersPerDay: { date: string; count: number }[];
+  topActiveUsers: { userId: string; name: string | null; msisdn: string | null; count: number }[];
   messagesPerDay: { date: string; count: number }[];
   imagesPerDay: { date: string; count: number }[];
   usersPerDay: { date: string; count: number }[];
@@ -225,6 +227,81 @@ export default function Dashboard() {
         <div className="stat-card">
           <span className="stat-label">Custom Girlfriends</span>
           <span className="stat-value">{metrics.customGirlfriends.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Active Users Chart + Top Active Users */}
+      <div className="charts-grid">
+        <div className="chart-card">
+          <h2 className="chart-title">Active Users — {rl}</h2>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={metrics.activeUsersPerDay}>
+                <defs>
+                  <linearGradient id="activeGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatDate}
+                  stroke="#555"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#555"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: '#e8e8e8',
+                  }}
+                  labelFormatter={formatDate}
+                  formatter={(value: unknown) => [Number(value).toLocaleString(), 'Active Users']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  fill="url(#activeGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#22c55e', stroke: '#0a0a0a', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h2 className="chart-title">Top Active Users</h2>
+          <div className="gf-list">
+            {metrics.topActiveUsers.map((user, i) => (
+              <div key={user.userId} className="gf-row">
+                <span className="gf-rank">{i + 1}</span>
+                <span className="gf-name">
+                  {user.msisdn || user.name || user.userId.slice(0, 8)}
+                </span>
+                <span className="gf-count">{user.count.toLocaleString()}</span>
+              </div>
+            ))}
+            {metrics.topActiveUsers.length === 0 && (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                No data yet
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

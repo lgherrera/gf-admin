@@ -92,6 +92,71 @@ export async function GET(req: NextRequest) {
       return Object.entries(map).map(([date, count]) => ({ date, count }));
     }
 
+    // ── Active users per day (distinct user_id per day) ──
+    let activeQuery = supabase
+      .from('chat_messages')
+      .select('user_id, created_at')
+      .order('created_at', { ascending: true });
+    if (cutoffDate) activeQuery = activeQuery.gte('created_at', cutoffDate);
+
+    const { data: activeRaw } = await activeQuery;
+
+    // Build a map of date → Set of user_ids
+    const activeMapSets: Record<string, Set<string>> = {};
+    activeRaw?.forEach((row) => {
+      const key = new Date(row.created_at).toISOString().split('T')[0];
+      if (!activeMapSets[key]) activeMapSets[key] = new Set();
+      activeMapSets[key].add(row.user_id);
+    });
+
+    let activeUsersPerDay: { date: string; count: number }[];
+    if (isAllTime && activeRaw && activeRaw.length > 0) {
+      const dateMap = buildDailyMapFromRange(
+        activeRaw[0].created_at,
+        activeRaw[activeRaw.length - 1].created_at
+      );
+      activeUsersPerDay = Object.keys(dateMap).map((date) => ({
+        date,
+        count: activeMapSets[date]?.size || 0,
+      }));
+    } else {
+      const dateMap = buildDailyMap(days || 14);
+      activeUsersPerDay = Object.keys(dateMap).map((date) => ({
+        date,
+        count: activeMapSets[date]?.size || 0,
+      }));
+    }
+
+    // ── Top active users by message count (scoped to range, top 5) ──
+    const activeUserCountMap: Record<string, number> = {};
+    activeRaw?.forEach((r) => {
+      activeUserCountMap[r.user_id] = (activeUserCountMap[r.user_id] || 0) + 1;
+    });
+
+    const topActiveIds = Object.entries(activeUserCountMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    const profileMap: Record<string, { name: string | null; msisdn: string | null }> = {};
+
+    if (topActiveIds.length > 0) {
+      const { data: activeProfiles } = await supabase
+        .from('user_profiles')
+        .select('supabase_auth_id, name, msisdn')
+        .in('supabase_auth_id', topActiveIds.map(([id]) => id));
+
+      activeProfiles?.forEach((p) => {
+        profileMap[p.supabase_auth_id] = { name: p.name, msisdn: p.msisdn };
+      });
+    }
+
+    const topActiveUsers = topActiveIds.map(([id, count]) => ({
+      userId: id,
+      name: profileMap[id]?.name || null,
+      msisdn: profileMap[id]?.msisdn || null,
+      count,
+    }));
+
     // ── Messages per day ──
     let messagesQuery = supabase
       .from('chat_messages')
@@ -217,17 +282,18 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
 
-    const profileMap: Record<string, { name: string | null; msisdn: string | null }> = {};
-
     if (topUserIds.length > 0) {
-      const { data: userProfiles } = await supabase
-        .from('user_profiles')
-        .select('supabase_auth_id, name, msisdn')
-        .in('supabase_auth_id', topUserIds.map(([id]) => id));
+      const missingTopUserIds = topUserIds.map(([id]) => id).filter((id) => !profileMap[id]);
+      if (missingTopUserIds.length > 0) {
+        const { data: userProfiles } = await supabase
+          .from('user_profiles')
+          .select('supabase_auth_id, name, msisdn')
+          .in('supabase_auth_id', missingTopUserIds);
 
-      userProfiles?.forEach((p) => {
-        profileMap[p.supabase_auth_id] = { name: p.name, msisdn: p.msisdn };
-      });
+        userProfiles?.forEach((p) => {
+          profileMap[p.supabase_auth_id] = { name: p.name, msisdn: p.msisdn };
+        });
+      }
     }
 
     const topUsers = topUserIds.map(([id, count]) => ({
@@ -316,6 +382,8 @@ export async function GET(req: NextRequest) {
       totalImages: totalImages || 0,
       activeToday,
       customGirlfriends: customGirlfriends || 0,
+      activeUsersPerDay,
+      topActiveUsers,
       messagesPerDay,
       imagesPerDay,
       usersPerDay,
