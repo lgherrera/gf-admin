@@ -12,14 +12,26 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Parse range param: 7, 14, 30, or "all"
+    // Parse range param: "yesterday", 7, 14, 30, or "all"
     const rangeParam = req.nextUrl.searchParams.get('range') || '14';
     const isAllTime = rangeParam === 'all';
-    const days = isAllTime ? null : parseInt(rangeParam) || 14;
+    const isYesterday = rangeParam === 'yesterday';
+    const days = isAllTime || isYesterday ? null : parseInt(rangeParam) || 14;
 
     // Compute cutoff date (null for all-time)
     let cutoffDate: string | null = null;
-    if (days) {
+    let endDate: string | null = null;
+
+    if (isYesterday) {
+      const yesterdayStart = new Date();
+      yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+      yesterdayStart.setHours(0, 0, 0, 0);
+      cutoffDate = yesterdayStart.toISOString();
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      endDate = todayStart.toISOString();
+    } else if (days) {
       const d = new Date();
       d.setDate(d.getDate() - days);
       cutoffDate = d.toISOString();
@@ -92,12 +104,19 @@ export async function GET(req: NextRequest) {
       return Object.entries(map).map(([date, count]) => ({ date, count }));
     }
 
+    function buildYesterdayMap(): Record<string, number> {
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      return { [y.toISOString().split('T')[0]]: 0 };
+    }
+
     // ── Active users per day (distinct user_id per day) ──
     let activeQuery = supabase
       .from('chat_messages')
       .select('user_id, created_at')
       .order('created_at', { ascending: true });
     if (cutoffDate) activeQuery = activeQuery.gte('created_at', cutoffDate);
+    if (endDate) activeQuery = activeQuery.lt('created_at', endDate);
 
     const { data: activeRaw } = await activeQuery;
 
@@ -120,7 +139,7 @@ export async function GET(req: NextRequest) {
         count: activeMapSets[date]?.size || 0,
       }));
     } else {
-      const dateMap = buildDailyMap(days || 14);
+      const dateMap = isYesterday ? buildYesterdayMap() : buildDailyMap(days || 14);
       activeUsersPerDay = Object.keys(dateMap).map((date) => ({
         date,
         count: activeMapSets[date]?.size || 0,
@@ -163,6 +182,7 @@ export async function GET(req: NextRequest) {
       .select('created_at')
       .order('created_at', { ascending: true });
     if (cutoffDate) messagesQuery = messagesQuery.gte('created_at', cutoffDate);
+    if (endDate) messagesQuery = messagesQuery.lt('created_at', endDate);
 
     const { data: messagesRaw } = await messagesQuery;
 
@@ -174,7 +194,7 @@ export async function GET(req: NextRequest) {
       );
       messagesPerDay = fillMap(map, messagesRaw);
     } else {
-      messagesPerDay = fillMap(buildDailyMap(days || 14), messagesRaw);
+      messagesPerDay = fillMap(isYesterday ? buildYesterdayMap() : buildDailyMap(days || 14), messagesRaw);
     }
 
     // ── New users per day ──
@@ -183,6 +203,7 @@ export async function GET(req: NextRequest) {
       .select('created_at')
       .order('created_at', { ascending: true });
     if (cutoffDate) usersQuery = usersQuery.gte('created_at', cutoffDate);
+    if (endDate) usersQuery = usersQuery.lt('created_at', endDate);
 
     const { data: usersRaw } = await usersQuery;
 
@@ -194,7 +215,7 @@ export async function GET(req: NextRequest) {
       );
       usersPerDay = fillMap(map, usersRaw);
     } else {
-      usersPerDay = fillMap(buildDailyMap(days || 14), usersRaw);
+      usersPerDay = fillMap(isYesterday ? buildYesterdayMap() : buildDailyMap(days || 14), usersRaw);
     }
 
     // ── Generated images per day ──
@@ -203,6 +224,7 @@ export async function GET(req: NextRequest) {
       .select('created_at')
       .order('created_at', { ascending: true });
     if (cutoffDate) imagesQuery = imagesQuery.gte('created_at', cutoffDate);
+    if (endDate) imagesQuery = imagesQuery.lt('created_at', endDate);
 
     const { data: imagesRaw } = await imagesQuery;
 
@@ -214,7 +236,7 @@ export async function GET(req: NextRequest) {
       );
       imagesPerDay = fillMap(map, imagesRaw);
     } else {
-      imagesPerDay = fillMap(buildDailyMap(days || 14), imagesRaw);
+      imagesPerDay = fillMap(isYesterday ? buildYesterdayMap() : buildDailyMap(days || 14), imagesRaw);
     }
 
     // ── Custom GFs per day ──
@@ -224,6 +246,7 @@ export async function GET(req: NextRequest) {
       .eq('girlfriend_type', 'custom')
       .order('created_at', { ascending: true });
     if (cutoffDate) customGfQuery = customGfQuery.gte('created_at', cutoffDate);
+    if (endDate) customGfQuery = customGfQuery.lt('created_at', endDate);
 
     const { data: customGfRaw } = await customGfQuery;
 
@@ -235,12 +258,13 @@ export async function GET(req: NextRequest) {
       );
       customGfPerDay = fillMap(map, customGfRaw);
     } else {
-      customGfPerDay = fillMap(buildDailyMap(days || 14), customGfRaw);
+      customGfPerDay = fillMap(isYesterday ? buildYesterdayMap() : buildDailyMap(days || 14), customGfRaw);
     }
 
     // ── Top girlfriends by message count (scoped to range) ──
     let gfMsgQuery = supabase.from('chat_messages').select('girlfriend_id');
     if (cutoffDate) gfMsgQuery = gfMsgQuery.gte('created_at', cutoffDate);
+    if (endDate) gfMsgQuery = gfMsgQuery.lt('created_at', endDate);
 
     const { data: gfMessages } = await gfMsgQuery;
 
@@ -270,6 +294,7 @@ export async function GET(req: NextRequest) {
     // ── Top users by message count (scoped to range) ──
     let userMsgQuery = supabase.from('chat_messages').select('user_id');
     if (cutoffDate) userMsgQuery = userMsgQuery.gte('created_at', cutoffDate);
+    if (endDate) userMsgQuery = userMsgQuery.lt('created_at', endDate);
 
     const { data: userMessages } = await userMsgQuery;
 
@@ -306,6 +331,7 @@ export async function GET(req: NextRequest) {
     // ── Top generators by image count (scoped to range) ──
     let genQuery = supabase.from('generated_images').select('user_id');
     if (cutoffDate) genQuery = genQuery.gte('created_at', cutoffDate);
+    if (endDate) genQuery = genQuery.lt('created_at', endDate);
 
     const { data: genImages } = await genQuery;
 
@@ -343,6 +369,7 @@ export async function GET(req: NextRequest) {
       .select('created_by')
       .eq('girlfriend_type', 'custom');
     if (cutoffDate) creatorQuery = creatorQuery.gte('created_at', cutoffDate);
+    if (endDate) creatorQuery = creatorQuery.lt('created_at', endDate);
 
     const { data: allCustomGf } = await creatorQuery;
 

@@ -14,9 +14,10 @@ import {
 } from 'recharts';
 import Nav from './components/nav';
 
-type Range = '7' | '14' | '30' | 'all';
+type Range = 'yesterday' | '7' | '14' | '30' | 'all';
 
 const RANGE_OPTIONS: { value: Range; label: string }[] = [
+  { value: 'yesterday', label: 'Yesterday' },
   { value: '7', label: '7D' },
   { value: '14', label: '14D' },
   { value: '30', label: '30D' },
@@ -24,6 +25,7 @@ const RANGE_OPTIONS: { value: Range; label: string }[] = [
 ];
 
 function rangeLabel(range: Range): string {
+  if (range === 'yesterday') return 'Yesterday';
   if (range === '7') return 'Last 7 Days';
   if (range === '14') return 'Last 14 Days';
   if (range === '30') return 'Last 30 Days';
