@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Nav from '../components/nav';
+import './messages.css';
 
 interface Message {
   id: string;
@@ -67,7 +68,6 @@ export default function MessagesPage() {
     fetchMessages(password, 0, false, newRating);
   };
 
-  // Check if password is in sessionStorage
   useEffect(() => {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
@@ -76,7 +76,6 @@ export default function MessagesPage() {
     }
   }, [fetchMessages]);
 
-  // Save password on successful auth
   useEffect(() => {
     if (authenticated && password) {
       sessionStorage.setItem('admin-pwd', password);
@@ -123,35 +122,21 @@ export default function MessagesPage() {
       <Nav />
       <div className="feed-page">
         <div className="feed-header">
-          <h1 className="feed-title">Recent Messages</h1>
-          <span className="feed-count">{total.toLocaleString()} total</span>
-        </div>
-
-        <div className="rating-toggle" style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
-          {(['all', 'nsfw', 'sfw'] as RatingFilter[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => handleRatingChange(r)}
-              style={{
-                padding: '0.4rem 1rem',
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: rating === r ? 700 : 400,
-                color: '#fff',
-                background:
-                  rating !== r
-                    ? '#333'
-                    : r === 'nsfw'
-                      ? '#e53e3e'
-                      : r === 'sfw'
-                        ? '#00b4d8'
-                        : '#666',
-              }}
-            >
-              {r.toUpperCase()}
-            </button>
-          ))}
+          <div>
+            <h1 className="feed-title">Recent Messages</h1>
+            <span className="feed-count">{total.toLocaleString()} total</span>
+          </div>
+          <div className="rating-toggle-group">
+            {(['all', 'nsfw', 'sfw'] as RatingFilter[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => handleRatingChange(r)}
+                className={`rating-toggle-btn ${rating === r ? `rating-active-${r}` : ''}`}
+              >
+                {r.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
 
         <table className="feed-table">
