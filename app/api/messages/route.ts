@@ -12,14 +12,22 @@ export async function GET(req: NextRequest) {
   }
 
   const offset = parseInt(req.nextUrl.searchParams.get('offset') || '0');
+  const rating = req.nextUrl.searchParams.get('rating') || 'all';
   const limit = 50;
 
   try {
-    const { data: messages, count } = await supabase
+    let query = supabase
       .from('chat_messages')
-      .select('id, user_id, girlfriend_id, role, content, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .select('id, user_id, girlfriend_id, role, content, created_at, content_rating', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (rating === 'nsfw') {
+      query = query.eq('content_rating', 'nsfw');
+    } else if (rating === 'sfw') {
+      query = query.eq('content_rating', 'sfw');
+    }
+
+    const { data: messages, count } = await query.range(offset, offset + limit - 1);
 
     // Get unique girlfriend IDs to resolve names
     const gfIds = [...new Set(messages?.map((m) => m.girlfriend_id).filter(Boolean))];
@@ -52,6 +60,7 @@ export async function GET(req: NextRequest) {
       character: gfNameMap[m.girlfriend_id] || m.girlfriend_id,
       role: m.role,
       content: m.content,
+      content_rating: m.content_rating,
     }));
 
     return NextResponse.json({

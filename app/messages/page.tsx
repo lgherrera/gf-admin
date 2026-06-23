@@ -12,7 +12,10 @@ interface Message {
   character: string;
   role: string;
   content: string;
+  content_rating: string;
 }
+
+type RatingFilter = 'all' | 'nsfw' | 'sfw';
 
 export default function MessagesPage() {
   const [password, setPassword] = useState('');
@@ -21,12 +24,13 @@ export default function MessagesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rating, setRating] = useState<RatingFilter>('all');
 
-  const fetchMessages = useCallback(async (pwd: string, offset = 0, append = false) => {
+  const fetchMessages = useCallback(async (pwd: string, offset = 0, append = false, ratingFilter: RatingFilter = 'all') => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/messages?offset=${offset}`, {
+      const res = await fetch(`/api/messages?offset=${offset}&rating=${ratingFilter}`, {
         headers: { 'x-admin-password': pwd },
       });
       if (!res.ok) {
@@ -50,11 +54,17 @@ export default function MessagesPage() {
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    fetchMessages(password);
+    fetchMessages(password, 0, false, rating);
   };
 
   const loadMore = () => {
-    fetchMessages(password, messages.length, true);
+    fetchMessages(password, messages.length, true, rating);
+  };
+
+  const handleRatingChange = (newRating: RatingFilter) => {
+    setRating(newRating);
+    setMessages([]);
+    fetchMessages(password, 0, false, newRating);
   };
 
   // Check if password is in sessionStorage
@@ -62,7 +72,7 @@ export default function MessagesPage() {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
       setPassword(saved);
-      fetchMessages(saved);
+      fetchMessages(saved, 0, false, 'all');
     }
   }, [fetchMessages]);
 
@@ -115,6 +125,33 @@ export default function MessagesPage() {
         <div className="feed-header">
           <h1 className="feed-title">Recent Messages</h1>
           <span className="feed-count">{total.toLocaleString()} total</span>
+        </div>
+
+        <div className="rating-toggle" style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+          {(['all', 'nsfw', 'sfw'] as RatingFilter[]).map((r) => (
+            <button
+              key={r}
+              onClick={() => handleRatingChange(r)}
+              style={{
+                padding: '0.4rem 1rem',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: rating === r ? 700 : 400,
+                color: '#fff',
+                background:
+                  rating !== r
+                    ? '#333'
+                    : r === 'nsfw'
+                      ? '#e53e3e'
+                      : r === 'sfw'
+                        ? '#00b4d8'
+                        : '#666',
+              }}
+            >
+              {r.toUpperCase()}
+            </button>
+          ))}
         </div>
 
         <table className="feed-table">
