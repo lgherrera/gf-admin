@@ -12,14 +12,22 @@ export async function GET(req: NextRequest) {
   }
 
   const offset = parseInt(req.nextUrl.searchParams.get('offset') || '0');
+  const rating = req.nextUrl.searchParams.get('rating') || 'all';
   const limit = 50;
 
   try {
-    const { data: images, count } = await supabase
+    let query = supabase
       .from('generated_images')
-      .select('id, user_id, girlfriend_id, prompt, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .select('id, user_id, girlfriend_id, prompt, created_at, content_rating', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (rating === 'nsfw') {
+      query = query.eq('content_rating', 'nsfw');
+    } else if (rating === 'sfw') {
+      query = query.eq('content_rating', 'sfw');
+    }
+
+    const { data: images, count } = await query.range(offset, offset + limit - 1);
 
     // Get unique girlfriend IDs to resolve names
     const gfIds = [...new Set(images?.map((m) => m.girlfriend_id).filter(Boolean))];

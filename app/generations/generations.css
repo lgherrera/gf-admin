@@ -1,0 +1,47 @@
+/* app/generations/generations.css */
+
+/* Rating toggle group */
+.rating-toggle-group {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #333;
+  }
+  
+  .rating-toggle-btn {
+    padding: 0.4rem 1rem;
+    border: none;
+    background: transparent;
+    color: #888;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .rating-toggle-btn:not(:last-child) {
+    border-right: 1px solid #333;
+  }
+  
+  .rating-toggle-btn:hover {
+    color: #fff;
+    background: #222;
+  }
+  
+  .rating-active-all {
+    color: #fff;
+    background: #444;
+    font-weight: 700;
+  }
+  
+  .rating-active-nsfw {
+    color: #fff;
+    background: #e53e3e;
+    font-weight: 700;
+  }
+  
+  .rating-active-sfw {
+    color: #fff;
+    background: #00b4d8;
+    font-weight: 700;
+  }

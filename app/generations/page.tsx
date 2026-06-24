@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Nav from '../components/nav';
+import '../generations/generations.css';
 
 interface Generation {
   id: string;
@@ -13,6 +14,8 @@ interface Generation {
   prompt: string;
 }
 
+type RatingFilter = 'all' | 'nsfw' | 'sfw';
+
 export default function GenerationsPage() {
   const [password, setPassword] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
@@ -20,12 +23,13 @@ export default function GenerationsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rating, setRating] = useState<RatingFilter>('all');
 
-  const fetchGenerations = useCallback(async (pwd: string, offset = 0, append = false) => {
+  const fetchGenerations = useCallback(async (pwd: string, offset = 0, append = false, ratingFilter: RatingFilter = 'all') => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/generations?offset=${offset}`, {
+      const res = await fetch(`/api/generations?offset=${offset}&rating=${ratingFilter}`, {
         headers: { 'x-admin-password': pwd },
       });
       if (!res.ok) {
@@ -49,23 +53,27 @@ export default function GenerationsPage() {
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
-    fetchGenerations(password);
+    fetchGenerations(password, 0, false, rating);
   };
 
   const loadMore = () => {
-    fetchGenerations(password, generations.length, true);
+    fetchGenerations(password, generations.length, true, rating);
   };
 
-  // Check if password is in sessionStorage
+  const handleRatingChange = (newRating: RatingFilter) => {
+    setRating(newRating);
+    setGenerations([]);
+    fetchGenerations(password, 0, false, newRating);
+  };
+
   useEffect(() => {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
       setPassword(saved);
-      fetchGenerations(saved);
+      fetchGenerations(saved, 0, false, 'all');
     }
   }, [fetchGenerations]);
 
-  // Save password on successful auth
   useEffect(() => {
     if (authenticated && password) {
       sessionStorage.setItem('admin-pwd', password);
@@ -112,8 +120,21 @@ export default function GenerationsPage() {
       <Nav />
       <div className="feed-page">
         <div className="feed-header">
-          <h1 className="feed-title">Recent Generations</h1>
-          <span className="feed-count">{total.toLocaleString()} total</span>
+          <div>
+            <h1 className="feed-title">Recent Generations</h1>
+            <span className="feed-count">{total.toLocaleString()} total</span>
+          </div>
+          <div className="rating-toggle-group">
+            {(['all', 'nsfw', 'sfw'] as RatingFilter[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => handleRatingChange(r)}
+                className={`rating-toggle-btn ${rating === r ? `rating-active-${r}` : ''}`}
+              >
+                {r.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
 
         <table className="feed-table">
