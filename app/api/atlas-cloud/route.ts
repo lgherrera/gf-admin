@@ -14,11 +14,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { type, model, prompt, image_url, duration } = body as {
+    const { type, model, prompt, images, aspect_ratio, duration } = body as {
       type: "image" | "video";
       model: string;
       prompt: string;
-      image_url?: string;
+      images?: string[];
+      aspect_ratio?: string;
       duration?: number;
     };
 
@@ -33,8 +34,13 @@ export async function POST(req: NextRequest) {
       prompt,
     };
 
-    if (image_url) {
-      payload.image_url = image_url;
+    // Atlas Cloud edit models expect "images": ["url1", "url2"]
+    if (images && images.length > 0) {
+      payload.images = images;
+    }
+
+    if (aspect_ratio) {
+      payload.aspect_ratio = aspect_ratio;
     }
 
     if (type === "video" && duration) {

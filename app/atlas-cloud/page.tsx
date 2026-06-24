@@ -4,8 +4,39 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Nav from '../components/nav';
+import './atlas-cloud.css';
 
 type Tab = 'images' | 'videos';
+
+/** Compress an image file client-side to stay under Vercel's 4.5 MB body limit */
+function compressImage(file: File, maxDim = 2048, quality = 0.85): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error('Compression failed'));
+          resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 interface GenerationResult {
   url: string;
@@ -23,6 +54,7 @@ export default function AtlasCloudPage() {
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [referencePreview, setReferencePreview] = useState<string | null>(null);
   const [duration, setDuration] = useState(5);
+  const [aspectRatio, setAspectRatio] = useState('9:16');
 
   // Generation state
   const [loading, setLoading] = useState(false);
@@ -138,11 +170,13 @@ export default function AtlasCloudPage() {
     try {
       let imageUrl: string | undefined;
 
-      // Step 1: Upload reference image if provided
+      // Step 1: Upload reference image if provided (compressed to avoid Vercel 4.5 MB limit)
       if (referenceFile) {
+        setStatus('compressing image...');
+        const compressed = await compressImage(referenceFile);
         setStatus('uploading reference...');
         const formData = new FormData();
-        formData.append('file', referenceFile);
+        formData.append('file', compressed);
 
         const uploadRes = await fetch('/api/atlas-cloud/upload', {
           method: 'POST',
@@ -173,7 +207,8 @@ export default function AtlasCloudPage() {
           type: tab === 'images' ? 'image' : 'video',
           model,
           prompt,
-          image_url: imageUrl,
+          images: imageUrl ? [imageUrl] : undefined,
+          aspect_ratio: aspectRatio,
           ...(tab === 'videos' && { duration }),
         }),
       });
@@ -332,6 +367,22 @@ export default function AtlasCloudPage() {
               className="ac-textarea"
               rows={5}
             />
+          </div>
+
+          {/* Aspect Ratio */}
+          <div className="ac-field">
+            <label className="ac-label">Aspect Ratio</label>
+            <div className="ac-ratio-row">
+              {['9:16', '2:3', '3:4', '1:1', '4:3', '3:2', '16:9'].map((r) => (
+                <button
+                  key={r}
+                  className={`ac-ratio-btn ${aspectRatio === r ? 'ac-ratio-active' : ''}`}
+                  onClick={() => setAspectRatio(r)}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Duration — Videos only */}
