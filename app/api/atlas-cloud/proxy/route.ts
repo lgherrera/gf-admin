@@ -3,22 +3,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  const adminPassword = req.headers.get('x-admin-password');
-  if (!adminPassword) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const url = req.nextUrl.searchParams.get('url');
   if (!url) {
     return NextResponse.json({ error: 'Missing url param' }, { status: 400 });
   }
 
+  // Only allow proxying from the expected Atlas Cloud domain
+  const allowed = ['atlas-media.oss-us-west-1.aliyuncs.com'];
   try {
-    const response = await fetch(url, {
-      headers: {
-        // No Referer header — bypasses OSS hotlink protection
-      },
-    });
+    const parsed = new URL(url);
+    if (!allowed.includes(parsed.hostname)) {
+      return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 });
+    }
+  } catch {
+    return NextResponse.json({ error: 'Invalid URL' }, { status: 400 });
+  }
+
+  try {
+    const response = await fetch(url);
 
     if (!response.ok) {
       return NextResponse.json(
@@ -27,7 +29,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const contentType =
+      response.headers.get('content-type') || 'application/octet-stream';
     const buffer = await response.arrayBuffer();
 
     return new NextResponse(buffer, {
