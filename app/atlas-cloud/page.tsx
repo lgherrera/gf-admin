@@ -9,6 +9,7 @@ type Tab = 'images' | 'videos';
 
 interface GenerationResult {
   url: string;
+  proxyUrl: string;
   predictTime?: number;
 }
 
@@ -33,6 +34,13 @@ export default function AtlasCloudPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /** Build a proxied URL to avoid OSS hotlink 403s */
+  const proxyUrl = useCallback(
+    (originalUrl: string) =>
+      `/api/atlas-cloud/proxy?url=${encodeURIComponent(originalUrl)}`,
+    []
+  );
 
   useEffect(() => {
     const saved = sessionStorage.getItem('admin-password');
@@ -87,10 +95,12 @@ export default function AtlasCloudPage() {
           if (data.status === 'completed' || data.status === 'succeeded') {
             if (pollingRef.current) clearInterval(pollingRef.current);
             if (timerRef.current) clearInterval(timerRef.current);
+            const rawUrl = data.outputs?.[0] || '';
             setStatus('');
             setLoading(false);
             setResult({
-              url: data.outputs?.[0] || '',
+              url: rawUrl,
+              proxyUrl: proxyUrl(rawUrl),
               predictTime: data.predictTime,
             });
           } else if (data.status === 'failed') {
@@ -107,7 +117,7 @@ export default function AtlasCloudPage() {
         }
       }, 3000);
     },
-    [password]
+    [password, proxyUrl]
   );
 
   const handleGenerate = async () => {
@@ -185,7 +195,8 @@ export default function AtlasCloudPage() {
   const downloadResult = async () => {
     if (!result) return;
     try {
-      const res = await fetch(result.url);
+      // Download via proxy to avoid 403
+      const res = await fetch(result.proxyUrl);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -389,7 +400,7 @@ export default function AtlasCloudPage() {
           {result && !loading && tab === 'images' && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={result.url}
+              src={result.proxyUrl}
               alt={prompt}
               className="ac-result-img"
             />
@@ -397,7 +408,7 @@ export default function AtlasCloudPage() {
 
           {result && !loading && tab === 'videos' && (
             <video
-              src={result.url}
+              src={result.proxyUrl}
               controls
               autoPlay
               loop
