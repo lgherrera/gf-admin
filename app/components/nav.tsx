@@ -7,21 +7,19 @@ import { usePathname } from 'next/navigation';
 
 const links = [
   { href: '/', label: 'Dashboard' },
+  { href: '/characters', label: 'Characters' },
   { href: '/messages', label: 'Messages' },
   { href: '/generations', label: 'Generations' },
+  { href: '/gallery', label: 'Gallery' },
+  { href: '/funnel', label: 'Funnel' },
   { href: '/generate/images', label: 'Images' },
   { href: '/generate/videos', label: 'Videos' },
   { href: '/runpod', label: 'RunPod' },
-  { href: '/gallery', label: 'Gallery' },
   { href: '/atlas-cloud', label: 'Atlas Cloud' },
-  { href: '/funnel', label: 'Funnels' },
 ];
 
 export default function Nav() {
   const pathname = usePathname();
-
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   return (
     <nav className="nav">
@@ -31,7 +29,7 @@ export default function Nav() {
           <Link
             key={link.href}
             href={link.href}
-            className={`nav-link ${isActive(link.href) ? 'nav-link-active' : ''}`}
+            className={`nav-link ${pathname === link.href ? 'nav-link-active' : ''}`}
           >
             {link.label}
           </Link>
