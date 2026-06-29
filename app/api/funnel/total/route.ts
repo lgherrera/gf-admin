@@ -47,9 +47,22 @@ export async function GET(req: NextRequest) {
       return q;
     }
 
-    // Helper: count page_visits for a specific page value
+    // Helper: count page_visits for an exact page value
     function buildPageQuery(page: string) {
       let q = supabase.from('page_visits').select('*', { count: 'exact', head: true }).eq('page', page);
+      if (dateRange) {
+        q = q.gte('created_at', dateRange.since);
+        if (dateRange.until) q = q.lt('created_at', dateRange.until);
+      }
+      if (rating !== 'all') {
+        q = q.eq('content_rating', rating);
+      }
+      return q;
+    }
+
+    // Helper: count page_visits matching a page pattern (e.g. chat pages '%/chat')
+    function buildPageLikeQuery(pattern: string) {
+      let q = supabase.from('page_visits').select('*', { count: 'exact', head: true }).like('page', pattern);
       if (dateRange) {
         q = q.gte('created_at', dateRange.since);
         if (dateRange.until) q = q.lt('created_at', dateRange.until);
@@ -63,8 +76,8 @@ export async function GET(req: NextRequest) {
     const [middleware, profiles, homepage, chat, create, shorts, renderImage] = await Promise.all([
       buildQuery('groobyte_callbacks', 'received_at'),
       buildQuery('user_profiles', 'created_at'),
-      buildQuery('homepage_visits', 'created_at'),
-      buildQuery('chat_visits', 'created_at'),
+      buildPageQuery('/'),
+      buildPageLikeQuery('%/chat'),
       buildPageQuery('create'),
       buildPageQuery('shorts'),
       buildPageQuery('render_image'),
