@@ -12,6 +12,7 @@ const links = [
   { href: '/generations', label: 'Generations' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/funnel', label: 'Funnel' },
+  { href: '/tokens', label: 'Tokens' },
   { href: '/generate/images', label: 'Images' },
   { href: '/generate/videos', label: 'Videos' },
   { href: '/runpod', label: 'RunPod' },

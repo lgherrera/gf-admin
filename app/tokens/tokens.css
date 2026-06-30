@@ -1,0 +1,184 @@
+/* app/tokens/tokens.css */
+
+.tk-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+  
+  .tk-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  
+  .tk-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+  
+  /* SFW / NSFW / All pill group */
+  .tk-rating-group {
+    display: inline-flex;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .tk-rating {
+    background: transparent;
+    color: #888;
+    border: none;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  
+  .tk-rating:not(:last-child) {
+    border-right: 1px solid #2a2a2a;
+  }
+  
+  .tk-rating:hover {
+    color: #ddd;
+  }
+  
+  .tk-rating-all-active {
+    background: #444;
+    color: #fff;
+  }
+  
+  .tk-rating-sfw-active {
+    background: #00b4d8;
+    color: #fff;
+  }
+  
+  .tk-rating-nsfw-active {
+    background: #e5383b;
+    color: #fff;
+  }
+  
+  /* Stat cards */
+  .tk-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  
+  .tk-card {
+    background: #161616;
+    border: 1px solid #242424;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .tk-card-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+  }
+  
+  .tk-card-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+  }
+  
+  .tk-card-sub {
+    font-size: 11px;
+    color: #666;
+  }
+  
+  /* Per-model table */
+  .tk-table-wrap {
+    background: #161616;
+    border: 1px solid #242424;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .tk-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .tk-table th,
+  .tk-table td {
+    padding: 14px 18px;
+    font-size: 14px;
+    text-align: right;
+    color: #ddd;
+    white-space: nowrap;
+  }
+  
+  .tk-table thead th {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #888;
+    background: #1c1c1c;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  
+  .tk-th-left,
+  .tk-td-left {
+    text-align: left !important;
+  }
+  
+  .tk-table tbody tr:not(:last-child) td {
+    border-bottom: 1px solid #202020;
+  }
+  
+  .tk-table tbody tr:hover td {
+    background: #1a1a1a;
+  }
+  
+  .tk-td-left {
+    font-weight: 600;
+    color: #fff;
+  }
+  
+  .tk-empty {
+    text-align: center !important;
+    color: #666;
+    padding: 32px;
+  }
+  
+  .tk-table tfoot td {
+    border-top: 1px solid #2a2a2a;
+    background: #1c1c1c;
+  }
+  
+  .tk-total-label,
+  .tk-total-value {
+    color: #fff;
+    font-weight: 700;
+  }
+  
+  .tk-error {
+    color: #e5383b;
+    margin-top: 16px;
+    font-size: 14px;
+  }
+  
+  @media (max-width: 720px) {
+    .tk-cards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .tk-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+  }
