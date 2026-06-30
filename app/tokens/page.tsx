@@ -68,6 +68,8 @@ export default function TokensPage() {
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
+    sessionStorage.setItem('admin-pwd', password);
+    setAuthenticated(true);
     fetchTokens(password);
   };
 
@@ -76,6 +78,7 @@ export default function TokensPage() {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
       setPassword(saved);
+      setAuthenticated(true);
       fetchTokens(saved);
     }
   }, [fetchTokens]);

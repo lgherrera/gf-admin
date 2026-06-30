@@ -53,6 +53,8 @@ export default function GenerationsPage() {
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
+    sessionStorage.setItem('admin-pwd', password);
+    setAuthenticated(true);
     fetchGenerations(password, 0, false, rating);
   };
 
@@ -70,6 +72,7 @@ export default function GenerationsPage() {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
       setPassword(saved);
+      setAuthenticated(true);
       fetchGenerations(saved, 0, false, 'all');
     }
   }, [fetchGenerations]);

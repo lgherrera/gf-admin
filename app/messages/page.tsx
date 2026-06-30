@@ -55,6 +55,8 @@ export default function MessagesPage() {
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
+    sessionStorage.setItem('admin-pwd', password);
+    setAuthenticated(true);
     fetchMessages(password, 0, false, rating);
   };
 
@@ -72,6 +74,7 @@ export default function MessagesPage() {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
       setPassword(saved);
+      setAuthenticated(true);
       fetchMessages(saved, 0, false, 'all');
     }
   }, [fetchMessages]);

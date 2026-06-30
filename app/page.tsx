@@ -85,6 +85,8 @@ export default function Dashboard() {
 
   const handleLogin = (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
+    sessionStorage.setItem('admin-pwd', password);
+    setAuthenticated(true);
     fetchMetrics(password, range);
   };
 
@@ -105,6 +107,7 @@ export default function Dashboard() {
     const saved = sessionStorage.getItem('admin-pwd');
     if (saved) {
       setPassword(saved);
+      setAuthenticated(true);
       fetchMetrics(saved, '14');
     }
   }, [fetchMetrics]);
