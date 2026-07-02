@@ -2,46 +2,81 @@
 
 /* Rating toggle group */
 .rating-toggle-group {
-    display: flex;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #333;
-  }
-  
-  .rating-toggle-btn {
-    padding: 0.4rem 1rem;
-    border: none;
-    background: transparent;
-    color: #888;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  
-  .rating-toggle-btn:not(:last-child) {
-    border-right: 1px solid #333;
-  }
-  
-  .rating-toggle-btn:hover {
-    color: #fff;
-    background: #222;
-  }
-  
-  .rating-active-all {
-    color: #fff;
-    background: #444;
-    font-weight: 700;
-  }
-  
-  .rating-active-nsfw {
-    color: #fff;
-    background: #e53e3e;
-    font-weight: 700;
-  }
-  
-  .rating-active-sfw {
-    color: #fff;
-    background: #00b4d8;
-    font-weight: 700;
-  }
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.rating-toggle-btn {
+  padding: 0.4rem 1rem;
+  border: none;
+  background: transparent;
+  color: #888;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rating-toggle-btn:not(:last-child) {
+  border-right: 1px solid #333;
+}
+
+.rating-toggle-btn:hover {
+  color: #fff;
+  background: #222;
+}
+
+.rating-active-all {
+  color: #fff;
+  background: #444;
+  font-weight: 700;
+}
+
+.rating-active-nsfw {
+  color: #fff;
+  background: #e53e3e;
+  font-weight: 700;
+}
+
+.rating-active-sfw {
+  color: #fff;
+  background: #00b4d8;
+  font-weight: 700;
+}
+
+/* Status column */
+.td-status {
+  white-space: nowrap;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  line-height: 1.4;
+}
+
+.status-saved {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.status-censored {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.status-trashed {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.status-unknown {
+  background: rgba(148, 163, 184, 0.1);
+  color: #64748b;
+}

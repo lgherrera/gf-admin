@@ -11,6 +11,7 @@ interface Generation {
   time: string;
   user: string;
   character: string;
+  status: string | null;
   prompt: string;
 }
 
@@ -146,6 +147,7 @@ export default function GenerationsPage() {
               <th>Time</th>
               <th>User</th>
               <th>Character</th>
+              <th>Status</th>
               <th>Prompt</th>
             </tr>
           </thead>
@@ -155,6 +157,13 @@ export default function GenerationsPage() {
                 <td className="td-time">{formatTime(gen.time)}</td>
                 <td className="td-user">{gen.user}</td>
                 <td className="td-character">{gen.character}</td>
+                <td className="td-status">
+                  {gen.status ? (
+                    <span className={`status-badge status-${gen.status}`}>{gen.status}</span>
+                  ) : (
+                    <span className="status-badge status-unknown">—</span>
+                  )}
+                </td>
                 <td className="td-prompt" title={gen.prompt}>
                   {gen.prompt}
                 </td>

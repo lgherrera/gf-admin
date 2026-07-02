@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   try {
     let query = supabase
       .from('generated_images')
-      .select('id, user_id, girlfriend_id, prompt, created_at, content_rating', { count: 'exact' })
+      .select('id, user_id, girlfriend_id, prompt, created_at, content_rating, status', { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (rating === 'nsfw') {
@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
       time: m.created_at,
       user: profileMap[m.user_id]?.msisdn || profileMap[m.user_id]?.name || m.user_id?.slice(0, 8),
       character: gfNameMap[m.girlfriend_id] || m.girlfriend_id,
+      status: m.status,
       prompt: m.prompt,
     }));
 
