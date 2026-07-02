@@ -15,6 +15,13 @@ interface Generation {
   prompt: string;
 }
 
+interface Stats {
+  total: number;
+  saved: number;
+  censored: number;
+  trashed: number;
+}
+
 type RatingFilter = 'all' | 'nsfw' | 'sfw';
 
 export default function GenerationsPage() {
@@ -22,6 +29,7 @@ export default function GenerationsPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [generations, setGenerations] = useState<Generation[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rating, setRating] = useState<RatingFilter>('all');
@@ -44,6 +52,7 @@ export default function GenerationsPage() {
       const data = await res.json();
       setGenerations((prev) => (append ? [...prev, ...data.generations] : data.generations));
       setTotal(data.total);
+      if (!append && data.stats) setStats(data.stats);
       setAuthenticated(true);
     } catch {
       setError('Failed to load generations');
@@ -123,6 +132,27 @@ export default function GenerationsPage() {
     <>
       <Nav />
       <div className="feed-page">
+        {stats && (
+          <div className="stat-cards">
+            <div className="stat-card stat-card-total">
+              <span className="stat-card-label">Total Images</span>
+              <span className="stat-card-value">{stats.total.toLocaleString()}</span>
+            </div>
+            <div className="stat-card stat-card-saved">
+              <span className="stat-card-label">Saved</span>
+              <span className="stat-card-value">{stats.saved.toLocaleString()}</span>
+            </div>
+            <div className="stat-card stat-card-censored">
+              <span className="stat-card-label">Censored</span>
+              <span className="stat-card-value">{stats.censored.toLocaleString()}</span>
+            </div>
+            <div className="stat-card stat-card-trashed">
+              <span className="stat-card-label">Trashed</span>
+              <span className="stat-card-value">{stats.trashed.toLocaleString()}</span>
+            </div>
+          </div>
+        )}
+
         <div className="feed-header">
           <div>
             <h1 className="feed-title">Recent Generations</h1>

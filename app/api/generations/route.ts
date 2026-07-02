@@ -15,19 +15,44 @@ export async function GET(req: NextRequest) {
   const rating = req.nextUrl.searchParams.get('rating') || 'all';
   const limit = 50;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const applyRating = (q: any) => {
+    if (rating === 'nsfw') return q.eq('content_rating', 'nsfw');
+    if (rating === 'sfw') return q.eq('content_rating', 'sfw');
+    return q;
+  };
+
   try {
     let query = supabase
       .from('generated_images')
       .select('id, user_id, girlfriend_id, prompt, created_at, content_rating, status', { count: 'exact' })
       .order('created_at', { ascending: false });
 
-    if (rating === 'nsfw') {
-      query = query.eq('content_rating', 'nsfw');
-    } else if (rating === 'sfw') {
-      query = query.eq('content_rating', 'sfw');
-    }
+    query = applyRating(query);
 
     const { data: images, count } = await query.range(offset, offset + limit - 1);
+
+    // Only compute the status stat cards on the first page load
+    let stats: { total: number; saved: number; censored: number; trashed: number } | null = null;
+    if (offset === 0) {
+      const countByStatus = async (status?: string) => {
+        let q = supabase
+          .from('generated_images')
+          .select('*', { count: 'exact', head: true });
+        q = applyRating(q);
+        if (status) q = q.eq('status', status);
+        const { count: c } = await q;
+        return c || 0;
+      };
+
+      const [saved, censored, trashed] = await Promise.all([
+        countByStatus('saved'),
+        countByStatus('censored'),
+        countByStatus('trashed'),
+      ]);
+
+      stats = { total: count || 0, saved, censored, trashed };
+    }
 
     // Get unique girlfriend IDs to resolve names
     const gfIds = [...new Set(images?.map((m) => m.girlfriend_id).filter(Boolean))];
@@ -65,6 +90,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       generations: enriched || [],
       total: count || 0,
+      stats,
       offset,
       limit,
     });

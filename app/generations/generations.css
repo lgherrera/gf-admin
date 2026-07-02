@@ -1,5 +1,59 @@
 /* app/generations/generations.css */
 
+/* Stat cards */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-left-width: 3px;
+}
+
+.stat-card-label {
+  font-size: 0.8rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.stat-card-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.stat-card-total {
+  border-left-color: #00b4d8;
+}
+
+.stat-card-saved {
+  border-left-color: #22c55e;
+}
+
+.stat-card-censored {
+  border-left-color: #f59e0b;
+}
+
+.stat-card-trashed {
+  border-left-color: #94a3b8;
+}
+
+@media (max-width: 720px) {
+  .stat-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* Rating toggle group */
 .rating-toggle-group {
   display: flex;
